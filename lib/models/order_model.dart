@@ -43,8 +43,10 @@ class OrderModel {
         ),
       ),
       totalAmount: (map["totalAmount"] ?? 0).toDouble(),
-      paymentStatus: map["paymentStatus"] ?? "",
-      orderStatus: map["orderStatus"] ?? "",
+      paymentStatus:
+    (map["paymentStatus"] ?? "").toString().toLowerCase(),
+      orderStatus:
+    (map["orderStatus"] ?? "").toString().toLowerCase(),
       createdAt: DateTime.parse(map["createdAt"]),
     );
   }

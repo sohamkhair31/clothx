@@ -6,6 +6,7 @@ import '../controllers/admin_controller.dart';
 import '../controllers/product_controller.dart';
 import '../controllers/cart_controller.dart';
 import '../controllers/order_controller.dart';
+import '../controllers/admin_order_controller.dart';
 
 import '../models/product_model.dart';
 import '../models/cart_model.dart';
@@ -18,26 +19,15 @@ class TestScreen extends StatefulWidget {
 }
 
 class _TestScreenState extends State<TestScreen> {
-  String logs = "Ready...\n";
-  final ScrollController _scrollController = ScrollController();
+  ProductModel? selectedProduct;
+  int quantity = 1;
+  String selectedSize = "M";
 
-  void addLog(String text) {
-    setState(() {
-      logs += "$text\n";
-    });
-
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_scrollController.hasClients) {
-        _scrollController.jumpTo(
-          _scrollController.position.maxScrollExtent,
-        );
-      }
-    });
-  }
-
-  void clearLogs() {
-    setState(() {
-      logs = "Logs Cleared...\n";
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      context.read<ProductController>().fetchProducts();
     });
   }
 
@@ -45,304 +35,300 @@ class _TestScreenState extends State<TestScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthController>();
     final admin = context.watch<AdminController>();
-    final product = context.watch<ProductController>();
+    final productController = context.watch<ProductController>();
     final cart = context.watch<CartController>();
     final order = context.watch<OrderController>();
-
-    final loading = auth.isLoading ||
-        admin.isLoading ||
-        product.isLoading ||
-        order.isLoading;
+    final adminOrder = context.watch<AdminOrderController>();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Backend Test Dashboard"),
+        title: const Text("ClothX Full Test"),
+        actions: [
+          IconButton(
+            onPressed: () async {
+              await auth.logout();
+            },
+            icon: const Icon(Icons.logout),
+          ),
+        ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (loading) const LinearProgressIndicator(),
+            /// AUTH
+            const Text(
+              "Auth",
+              style: TextStyle(fontSize: 20),
+            ),
 
-            const SizedBox(height: 20),
-
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
+            Row(
               children: [
                 ElevatedButton(
-                  onPressed: clearLogs,
-                  child: const Text("Clear Logs"),
-                ),
-
-                ElevatedButton(
                   onPressed: () async {
-                    final result = await auth.signUp(
+                    await auth.signUp(
                       name: "Test User",
                       email: "test@gmail.com",
                       password: "123456",
                       phone: "9999999999",
                       address: "Pune",
                     );
-
-                    addLog("Signup: $result");
-
-                    if (!result) {
-                      addLog("Error: ${auth.errorMessage}");
-                    }
                   },
                   child: const Text("Signup"),
                 ),
-
+                const SizedBox(width: 10),
                 ElevatedButton(
                   onPressed: () async {
-                    final result = await auth.login(
+                    await auth.login(
                       email: "test@gmail.com",
                       password: "123456",
                     );
-
-                    addLog("Login: $result");
-
-                    if (!result) {
-                      addLog("Error: ${auth.errorMessage}");
-                    }
                   },
                   child: const Text("Login"),
-                ),
-
-                ElevatedButton(
-                  onPressed: () async {
-                    final productData = ProductModel(
-                      id: DateTime.now()
-                          .millisecondsSinceEpoch
-                          .toString(),
-                      name: "Black Hoodie",
-                      description: "Premium hoodie",
-                      price: 1499,
-                      images: ["dummy_url"],
-                      sizes: ["M", "L"],
-                      stock: 20,
-                      gender: "men",
-                      category: "hoodies",
-                      isActive: true,
-                      createdAt: DateTime.now(),
-                      updatedAt: DateTime.now(),
-                    );
-
-                    final result =
-                        await admin.addProduct(productData);
-
-                    addLog("Add Product: $result");
-
-                    if (!result) {
-                      addLog("Error: ${admin.errorMessage}");
-                    }
-                  },
-                  child: const Text("Add Product"),
-                ),
-
-                ElevatedButton(
-                  onPressed: () async {
-                    await product.fetchProducts();
-
-                    addLog(
-                        "Fetched Products: ${product.products.length}");
-                  },
-                  child: const Text("Fetch Products"),
-                ),
-
-                ElevatedButton(
-                  onPressed: () {
-                    addLog("=== PRODUCT CACHE ===");
-
-                    for (var p in product.products) {
-                      addLog(
-                        """
-ID: ${p.id}
-Name: ${p.name}
-Description: ${p.description}
-Price: ₹${p.price}
-Stock: ${p.stock}
-Gender: ${p.gender}
-Category: ${p.category}
-Sizes: ${p.sizes}
-Images: ${p.images}
-Created: ${p.createdAt}
-Updated: ${p.updatedAt}
--------------------------
-""",
-                      );
-                    }
-                  },
-                  child: const Text("Show Product Cache"),
-                ),
-
-                ElevatedButton(
-                  onPressed: () async {
-                    await product.clearLocalCache();
-
-                    addLog("Product Cache Cleared");
-                  },
-                  child: const Text("Clear Product Cache"),
-                ),
-
-                ElevatedButton(
-                  onPressed: () async {
-                    cart.loadCart();
-
-                    addLog("=== CART CACHE ===");
-
-                    for (var item in cart.cartItems) {
-                      addLog(
-                        """
-Product ID: ${item.productId}
-Name: ${item.name}
-Price: ₹${item.price}
-Size: ${item.size}
-Quantity: ${item.quantity}
-Image: ${item.image}
--------------------------
-""",
-                      );
-                    }
-                  },
-                  child: const Text("Show Cart Cache"),
-                ),
-
-                ElevatedButton(
-                  onPressed: () async {
-                    if (product.products.isEmpty) {
-                      addLog("No products available.");
-                      return;
-                    }
-
-                    final item = CartModel(
-                      productId: product.products.first.id,
-                      name: product.products.first.name,
-                      image: product.products.first.images.first,
-                      price: product.products.first.price,
-                      size: "M",
-                      quantity: 1,
-                    );
-
-                    await cart.addToCart(item);
-
-                    addLog(
-                      "Cart Updated -> Items: ${cart.cartItems.length}",
-                    );
-                  },
-                  child: const Text("Add To Cart"),
-                ),
-
-                ElevatedButton(
-                  onPressed: () async {
-                    if (auth.currentUser == null) {
-                      addLog("No logged in user.");
-                      return;
-                    }
-
-                    if (cart.cartItems.isEmpty) {
-                      addLog("Cart empty.");
-                      return;
-                    }
-
-                    final result = await order.placeOrder(
-                      userId: auth.currentUser!.uid,
-                      items: cart.cartItems,
-                      totalAmount: cart.totalPrice,
-                      cartController: cart,
-                    );
-
-                    addLog("Place Order: $result");
-
-                    if (!result) {
-                      addLog("Error: ${order.errorMessage}");
-                    }
-                  },
-                  child: const Text("Place Order"),
-                ),
-
-                ElevatedButton(
-                  onPressed: () async {
-                    if (auth.currentUser == null) {
-                      addLog("No logged in user.");
-                      return;
-                    }
-
-                    await order.fetchOrders(
-                      auth.currentUser!.uid,
-                    );
-
-                    addLog("=== ORDERS ===");
-
-                    for (var o in order.orders) {
-                      addLog(
-                        """
-Order ID: ${o.orderId}
-User ID: ${o.userId}
-Total: ₹${o.totalAmount}
-Payment: ${o.paymentStatus}
-Status: ${o.orderStatus}
-Created: ${o.createdAt}
-Items Count: ${o.items.length}
--------------------------
-""",
-                      );
-                    }
-                  },
-                  child: const Text("Fetch Orders"),
-                ),
-
-                ElevatedButton(
-                  onPressed: () async {
-                    await auth.logout();
-
-                    addLog("Logged Out");
-                  },
-                  child: const Text("Logout"),
                 ),
               ],
             ),
 
             const SizedBox(height: 20),
 
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                        "Current User: ${auth.currentUser?.email ?? "None"}"),
-                    Text(
-                        "Products: ${product.products.length}"),
-                    Text(
-                        "Cart Items: ${cart.cartItems.length}"),
-                    Text(
-                        "Cart Total: ₹${cart.totalPrice}"),
-                    Text(
-                        "Orders: ${order.orders.length}"),
-                  ],
+            /// ADMIN ADD PRODUCT
+            const Text(
+              "Admin",
+              style: TextStyle(fontSize: 20),
+            ),
+
+            ElevatedButton(
+              onPressed: () async {
+                final product = ProductModel(
+                  id: DateTime.now()
+                      .millisecondsSinceEpoch
+                      .toString(),
+                  name: "Black Hoodie",
+                  description: "Premium hoodie",
+                  price: 1499,
+                  images: ["dummy_url"],
+                  sizes: ["S", "M", "L"],
+                  stock: 20,
+                  gender: "men",
+                  category: "hoodies",
+                  isActive: true,
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                );
+
+                await admin.addProduct(product);
+
+                await productController.fetchProducts();
+              },
+              child: const Text("Add Dummy Product"),
+            ),
+
+            const SizedBox(height: 20),
+
+            /// PRODUCTS
+            const Text(
+              "Products",
+              style: TextStyle(fontSize: 20),
+            ),
+
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: productController.products.length,
+              itemBuilder: (context, index) {
+                final p = productController.products[index];
+
+                return Card(
+                  child: ListTile(
+                    title: Text(p.name),
+                    subtitle: Text(
+                      "₹${p.price} | Stock: ${p.stock}",
+                    ),
+                    trailing: selectedProduct?.id == p.id
+                        ? const Icon(Icons.check)
+                        : null,
+                    onTap: () {
+                      setState(() {
+                        selectedProduct = p;
+                        selectedSize = p.sizes.first;
+                        quantity = 1;
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 20),
+
+            if (selectedProduct != null) ...[
+              Text(
+                "Selected: ${selectedProduct!.name}",
+                style: const TextStyle(fontSize: 18),
+              ),
+
+              DropdownButton<String>(
+                value: selectedSize,
+                items: selectedProduct!.sizes.map((size) {
+                  return DropdownMenuItem(
+                    value: size,
+                    child: Text(size),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedSize = value!;
+                  });
+                },
+              ),
+
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      if (quantity > 1) {
+                        setState(() {
+                          quantity--;
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.remove),
+                  ),
+                  Text(quantity.toString()),
+                  IconButton(
+                    onPressed: () {
+                      if (quantity < selectedProduct!.stock) {
+                        setState(() {
+                          quantity++;
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.add),
+                  ),
+                ],
+              ),
+
+              ElevatedButton(
+                onPressed: () async {
+                  final item = CartModel(
+                    productId: selectedProduct!.id,
+                    name: selectedProduct!.name,
+                    image: selectedProduct!.images.first,
+                    price: selectedProduct!.price,
+                    size: selectedSize,
+                    quantity: quantity,
+                  );
+
+                  await cart.addToCart(item);
+                },
+                child: const Text("Add To Cart"),
+              ),
+            ],
+
+            const SizedBox(height: 20),
+
+            /// CART
+            const Text(
+              "Cart",
+              style: TextStyle(fontSize: 20),
+            ),
+
+            ...cart.cartItems.map(
+              (item) => ListTile(
+                title: Text(item.name),
+                subtitle: Text(
+                  "${item.size} x${item.quantity}",
                 ),
+                trailing: Text("₹${item.price}"),
+              ),
+            ),
+
+            Text("Total: ₹${cart.totalPrice}"),
+
+            ElevatedButton(
+              onPressed: () async {
+                if (auth.currentUser == null) return;
+
+                await order.placeOrder(
+                  userId: auth.currentUser!.uid,
+                  items: cart.cartItems,
+                  totalAmount: cart.totalPrice,
+                  cartController: cart,
+                );
+              },
+              child: const Text("Place Order"),
+            ),
+
+            const SizedBox(height: 20),
+
+            /// USER ORDERS
+            ElevatedButton(
+              onPressed: () async {
+                if (auth.currentUser == null) return;
+
+                await order.fetchOrders(
+                  auth.currentUser!.uid,
+                );
+              },
+              child: const Text("Fetch My Orders"),
+            ),
+
+            ...order.orders.map(
+              (o) => ListTile(
+                title: Text(o.orderId),
+                subtitle: Text(o.orderStatus),
+                trailing: Text("₹${o.totalAmount}"),
               ),
             ),
 
             const SizedBox(height: 20),
 
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                color: Colors.black,
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  child: Text(
-                    logs,
-                    style: const TextStyle(
-                      color: Colors.green,
-                      fontSize: 14,
-                    ),
+            /// ADMIN ORDERS
+            ElevatedButton(
+              onPressed: () async {
+                await adminOrder.fetchOrders();
+              },
+              child: const Text("Admin Fetch Orders"),
+            ),
+
+            ...adminOrder.orders.map(
+              (o) => Card(
+                child: ListTile(
+                  title: Text(o.orderId),
+                  subtitle: Text(o.orderStatus),
+                  trailing: DropdownButton<String>(
+  value: o.orderStatus.toLowerCase(),
+                    items: const [
+                      DropdownMenuItem(
+                        value: "pending",
+                        child: Text("Pending"),
+                      ),
+                      DropdownMenuItem(
+                        value: "confirmed",
+                        child: Text("Confirmed"),
+                      ),
+                      DropdownMenuItem(
+                        value: "shipped",
+                        child: Text("Shipped"),
+                      ),
+                      DropdownMenuItem(
+                        value: "delivered",
+                        child: Text("Delivered"),
+                      ),
+                      DropdownMenuItem(
+                        value: "cancelled",
+                        child: Text("Cancelled"),
+                      ),
+                    ],
+                    onChanged: (value) async {
+                      if (value == null) return;
+
+                      await adminOrder.updateOrderStatus(
+                        orderId: o.orderId,
+                        status: value,
+                      );
+                    },
                   ),
                 ),
               ),
