@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:image_picker/image_picker.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/admin_controller.dart';
 import '../controllers/product_controller.dart';
@@ -23,7 +26,229 @@ class _TestScreenState extends State<TestScreen> {
   ProductModel? selectedProduct;
   String selectedSize = "M";
   int quantity = 1;
+final nameController = TextEditingController();
+final descController = TextEditingController();
+final priceController = TextEditingController();
+final stockController = TextEditingController();
 
+String selectedGender = "men";
+String selectedCategory = "hoodies";
+Future<void> showAddProductDialog(
+  BuildContext context,
+) async {
+  final admin = context.read<AdminController>();
+
+  showDialog(
+    context: context,
+    builder: (_) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text("Add Product"),
+            content: SingleChildScrollView(
+              child: Column(
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: "Product Name",
+                    ),
+                  ),
+
+                  TextField(
+                    controller: descController,
+                    decoration: const InputDecoration(
+                      labelText: "Description",
+                    ),
+                  ),
+
+                  TextField(
+                    controller: priceController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: "Price",
+                    ),
+                  ),
+
+                  TextField(
+                    controller: stockController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: "Stock",
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  DropdownButton<String>(
+                    value: selectedGender,
+                    items: const [
+                      DropdownMenuItem(
+                        value: "men",
+                        child: Text("Men"),
+                      ),
+                      DropdownMenuItem(
+                        value: "women",
+                        child: Text("Women"),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedGender = value!;
+                      });
+                    },
+                  ),
+
+                  DropdownButton<String>(
+                    value: selectedCategory,
+                    items: const [
+                      DropdownMenuItem(
+                        value: "hoodies",
+                        child: Text("Hoodies"),
+                      ),
+                      DropdownMenuItem(
+                        value: "tshirts",
+                        child: Text("T-Shirts"),
+                      ),
+                      DropdownMenuItem(
+                        value: "shirts",
+                        child: Text("Shirts"),
+                      ),
+                      DropdownMenuItem(
+                        value: "pants",
+                        child: Text("Pants"),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedCategory = value!;
+                      });
+                    },
+                  ),
+
+                  Wrap(
+                    spacing: 8,
+                    children: ["S", "M", "L", "XL"].map((size) {
+                      final selected =
+                          selectedSizes.contains(size);
+
+                      return FilterChip(
+                        label: Text(size),
+                        selected: selected,
+                        onSelected: (_) {
+                          setDialogState(() {
+                            if (selected) {
+                              selectedSizes.remove(size);
+                            } else {
+                              selectedSizes.add(size);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 10),
+
+ElevatedButton(
+  onPressed: () async {
+    final ImagePicker picker = ImagePicker();
+
+    final List<XFile> pickedFiles =
+        await picker.pickMultiImage();
+
+if (pickedFiles.isNotEmpty) {
+  selectedImages = pickedFiles;
+}
+
+    setDialogState(() {});
+  },
+  child: const Text("Pick Images"),
+),
+
+          if (selectedImages.isNotEmpty)
+  SizedBox(
+    height: 120,
+    width: double.maxFinite,
+    child: ListView.separated(
+      shrinkWrap: true,
+      scrollDirection: Axis.horizontal,
+      itemCount: selectedImages.length,
+      separatorBuilder: (_, __) =>
+          const SizedBox(width: 8),
+      itemBuilder: (context, index) {
+        return FutureBuilder(
+          future: selectedImages[index].readAsBytes(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const SizedBox(
+                width: 80,
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+
+            return ClipRRect(
+              borderRadius:
+                  BorderRadius.circular(8),
+              child: Image.memory(
+                snapshot.data!,
+                width: 100,
+                height: 100,
+                fit: BoxFit.cover,
+              ),
+            );
+          },
+        );
+      },
+    ),
+  ),
+                ],
+              ),
+            ),
+
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+
+              ElevatedButton(
+                onPressed: () async {
+                  final result = await admin.addProduct(
+  name: nameController.text.trim(),
+  description: descController.text.trim(),
+  price: double.parse(priceController.text.trim()),
+  imageFiles: selectedImages,
+  sizes: selectedSizes,
+  stock: int.parse(stockController.text.trim()),
+  gender: selectedGender,
+  category: selectedCategory,
+);
+                  if (result) {
+                    Navigator.pop(context);
+
+                    nameController.clear();
+                    descController.clear();
+                    priceController.clear();
+                    stockController.clear();
+
+                    selectedSizes.clear();
+                    selectedImages.clear();
+                  }
+                },
+                child: const Text("Add Product"),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+List<String> selectedSizes = [];
+List<XFile> selectedImages = [];
   @override
   void initState() {
     super.initState();
@@ -58,7 +283,7 @@ class _TestScreenState extends State<TestScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("ClothX Backend Full Test"),
+        title: const Text("ClothX Backend Test"),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -67,7 +292,8 @@ class _TestScreenState extends State<TestScreen> {
           children: [
             sectionTitle("Auth"),
 
-            Row(
+            Wrap(
+              spacing: 10,
               children: [
                 ElevatedButton(
                   onPressed: () async {
@@ -81,7 +307,6 @@ class _TestScreenState extends State<TestScreen> {
                   },
                   child: const Text("Signup"),
                 ),
-                const SizedBox(width: 10),
                 ElevatedButton(
                   onPressed: () async {
                     await auth.login(
@@ -91,7 +316,6 @@ class _TestScreenState extends State<TestScreen> {
                   },
                   child: const Text("Login"),
                 ),
-                const SizedBox(width: 10),
                 ElevatedButton(
                   onPressed: () async {
                     await auth.logout();
@@ -105,49 +329,60 @@ class _TestScreenState extends State<TestScreen> {
 
             sectionTitle("Admin"),
 
-            ElevatedButton(
-              onPressed: () async {
-                final newProduct = ProductModel(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  name: "Black Hoodie",
-                  description: "Premium hoodie test",
-                  price: 1499,
-                  images: ["dummy_url"],
-                  sizes: ["S", "M", "L"],
-                  stock: 20,
-                  gender: "men",
-                  category: "hoodies",
-                  isActive: true,
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                );
+            Wrap(
+              spacing: 10,
+              children: [
+                ElevatedButton(
+                  onPressed: () async {
+                    await admin.fetchAdminProducts();
+                  },
+                  child: const Text("Fetch Admin Products"),
+                ),
 
-                await admin.addProduct(newProduct);
-                await product.fetchProducts();
-              },
-              child: const Text("Add Dummy Product"),
-            ),
-
-            ElevatedButton(
-              onPressed: () async {
-                await product.fetchProducts();
-              },
-              child: const Text("Refresh Products"),
-            ),
-
-            ElevatedButton(
-              onPressed: () {
-                product.loadFromCacheOnly();
-              },
-              child: const Text("Load Products From Cache"),
+                ElevatedButton(
+                  
+  onPressed: () {
+    showAddProductDialog(context);
+  },
+                 child: const Text("Add Product"),
+                ),
+              ],
             ),
 
             sectionTitle("Products"),
 
+            Wrap(
+              spacing: 10,
+              children: [
+                ElevatedButton(
+                  onPressed: () async {
+                    await product.fetchProducts();
+                  },
+                  child: const Text("Refresh Products"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    product.loadFromCacheOnly();
+                  },
+                  child: const Text("Load Cache Only"),
+                ),
+              ],
+            ),
+
             ...product.products.map((p) {
               return Card(
                 child: ListTile(
+                  leading: p.images.isNotEmpty
+                      ? Image.network(
+                          p.images.first,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                        )
+                      : const Icon(Icons.image),
+
                   title: Text(p.name),
+
                   subtitle: Text(
                     """
 ₹${p.price}
@@ -155,12 +390,13 @@ Stock: ${p.stock}
 Category: ${p.category}
 Gender: ${p.gender}
 Sizes: ${p.sizes.join(", ")}
-Updated: ${p.updatedAt}
 """,
                   ),
+
                   trailing: selectedProduct?.id == p.id
                       ? const Icon(Icons.check)
                       : null,
+
                   onTap: () {
                     setState(() {
                       selectedProduct = p;
@@ -174,6 +410,25 @@ Updated: ${p.updatedAt}
 
             if (selectedProduct != null) ...[
               sectionTitle("Selected Product"),
+
+              if (selectedProduct!.images.isNotEmpty)
+                SizedBox(
+                  height: 200,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: selectedProduct!.images.length,
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Image.network(
+                          selectedProduct!.images[index],
+                          width: 180,
+                          fit: BoxFit.cover,
+                        ),
+                      );
+                    },
+                  ),
+                ),
 
               Text("Name: ${selectedProduct!.name}"),
               Text("Price: ₹${selectedProduct!.price}"),
@@ -189,9 +444,8 @@ Updated: ${p.updatedAt}
                   );
                 }).toList(),
                 onChanged: (value) {
-                  setState(() {
-                    selectedSize = value!;
-                  });
+                  if (value == null) return;
+                  setState(() => selectedSize = value);
                 },
               ),
 
@@ -239,13 +493,18 @@ Updated: ${p.updatedAt}
             ...cart.cartItems.map((item) {
               return Card(
                 child: ListTile(
+                  leading: Image.network(
+                    item.image,
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
+                  ),
                   title: Text(item.name),
                   subtitle: Text(
-                    """
-Size: ${item.size}
-Qty: ${item.quantity}
-Subtotal: ₹${item.price * item.quantity}
-""",
+                    "Size: ${item.size} | Qty: ${item.quantity}",
+                  ),
+                  trailing: Text(
+                    "₹${item.price * item.quantity}",
                   ),
                 ),
               );
@@ -253,29 +512,18 @@ Subtotal: ₹${item.price * item.quantity}
 
             Text("Cart Total: ₹${cart.totalPrice}"),
 
-            Row(
-              children: [
-                ElevatedButton(
-                  onPressed: () async {
-                    if (auth.currentUser == null) return;
+            ElevatedButton(
+              onPressed: () async {
+                if (auth.currentUser == null) return;
 
-                    await order.placeOrder(
-                      userId: auth.currentUser!.uid,
-                      items: cart.cartItems,
-                      totalAmount: cart.totalPrice,
-                      cartController: cart,
-                    );
-                  },
-                  child: const Text("Place Order"),
-                ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: () async {
-                    await cart.clearCart();
-                  },
-                  child: const Text("Clear Cart"),
-                ),
-              ],
+                await order.placeOrder(
+                  userId: auth.currentUser!.uid,
+                  items: cart.cartItems,
+                  totalAmount: cart.totalPrice,
+                  cartController: cart,
+                );
+              },
+              child: const Text("Place Order"),
             ),
 
             sectionTitle("My Orders"),
@@ -283,24 +531,17 @@ Subtotal: ₹${item.price * item.quantity}
             ElevatedButton(
               onPressed: () async {
                 if (auth.currentUser == null) return;
-
                 await order.fetchOrders(auth.currentUser!.uid);
               },
               child: const Text("Fetch My Orders"),
             ),
 
-            ...order.orders.map((OrderModel o) {
+            ...order.orders.map((o) {
               return Card(
                 child: ListTile(
-                  title: Text("Order: ${o.orderId}"),
+                  title: Text(o.orderId),
                   subtitle: Text(
-                    """
-Status: ${o.orderStatus}
-Payment: ${o.paymentStatus}
-Items: ${o.items.length}
-Total: ₹${o.totalAmount}
-Created: ${o.createdAt}
-""",
+                    "${o.orderStatus} | ₹${o.totalAmount}",
                   ),
                 ),
               );
@@ -315,110 +556,39 @@ Created: ${o.createdAt}
               child: const Text("Fetch All Orders"),
             ),
 
-            ...adminOrder.orders.map((OrderModel o) {
+            ...adminOrder.orders.map((o) {
               return Card(
                 child: ListTile(
-                  title: Text("Order: ${o.orderId}"),
+                  title: Text(o.orderId),
                   subtitle: Text(
-                    """
-User: ${o.userId}
-Status: ${o.orderStatus}
-Total: ₹${o.totalAmount}
-""",
-                  ),
-                  trailing: DropdownButton<String>(
-                    value: o.orderStatus.toLowerCase(),
-                    items: const [
-                      DropdownMenuItem(
-                        value: "pending",
-                        child: Text("Pending"),
-                      ),
-                      DropdownMenuItem(
-                        value: "confirmed",
-                        child: Text("Confirmed"),
-                      ),
-                      DropdownMenuItem(
-                        value: "shipped",
-                        child: Text("Shipped"),
-                      ),
-                      DropdownMenuItem(
-                        value: "delivered",
-                        child: Text("Delivered"),
-                      ),
-                      DropdownMenuItem(
-                        value: "cancelled",
-                        child: Text("Cancelled"),
-                      ),
-                    ],
-                    onChanged: (value) async {
-                      if (value == null) return;
-
-                      await adminOrder.updateOrderStatus(
-                        orderId: o.orderId,
-                        status: value,
-                      );
-                    },
+                    "${o.orderStatus} | ₹${o.totalAmount}",
                   ),
                 ),
               );
             }),
 
-            sectionTitle("Debug Stats"),
-sectionTitle("Cache Debug"),
+            sectionTitle("Cache Debug"),
 
-Card(
-  child: Padding(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          product.loadedFromCache
-              ? "Cache Used: YES"
-              : "Cache Used: NO",
-          style: TextStyle(
-            color: product.loadedFromCache
-                ? Colors.green
-                : Colors.red,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        Text(
-          product.loadedFromServer
-              ? "Server Fetch: YES"
-              : "Server Fetch: NO",
-          style: TextStyle(
-            color: product.loadedFromServer
-                ? Colors.orange
-                : Colors.green,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        Text(
-          "Last Cache Load: ${product.lastCacheLoad ?? "Never"}",
-        ),
-
-        Text(
-          "Last Server Fetch: ${product.lastServerFetch ?? "Never"}",
-        ),
-
-        const Divider(),
-
-        Text("Products in Memory: ${product.products.length}"),
-        Text("Cart Items: ${cart.cartItems.length}"),
-        Text("Orders: ${order.orders.length}"),
-        Text("Admin Orders: ${adminOrder.orders.length}"),
-      ],
-    ),
-  ),
-),
-
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    Text("Cache Used: ${product.loadedFromCache}"),
+                    Text("Server Fetch: ${product.loadedFromServer}"),
+                    Text("Last Cache Load: ${product.lastCacheLoad}"),
+                    Text("Last Server Fetch: ${product.lastServerFetch}"),
+                    const Divider(),
+                    Text("Products: ${product.products.length}"),
+                    Text("Cart: ${cart.cartItems.length}"),
+                    Text("Orders: ${order.orders.length}"),
+                    Text("Admin Orders: ${adminOrder.orders.length}"),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
