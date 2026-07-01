@@ -12,8 +12,9 @@ class ProductModel {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String gender;
-
+final bool isActive;
   ProductModel({
+    required this.isActive,
     required this.id,
     required this.name,
     required this.description,
@@ -40,6 +41,7 @@ class ProductModel {
       "gender":gender,
       "createdAt": createdAt.toIso8601String(),
       "updatedAt": updatedAt.toIso8601String(),
+      "isActive": isActive,
     };
   }
 
@@ -56,6 +58,7 @@ class ProductModel {
       createdAt: DateTime.parse(map["createdAt"]),
       updatedAt: DateTime.parse(map["updatedAt"]),
       gender: map["gender"] ?? "unisex",
+      isActive: map["isActive"] ?? true,
     );
   }
 

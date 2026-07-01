@@ -1,34 +1,71 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/product_model.dart';
-import '../core/services/cache/cache_service.dart';
+import '../repositories/admin_repo.dart';
 
 class AdminController extends ChangeNotifier {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final CacheService _cacheService = CacheService();
-
+  final AdminRepo _adminRepo = AdminRepo();
+List<ProductModel> adminProducts = [];
   bool isLoading = false;
   String? errorMessage;
+Future<void> fetchAdminProducts() async {
+  try {
+    isLoading = true;
+    notifyListeners();
 
+    adminProducts =
+        await _adminRepo.getAllProducts();
+
+    isLoading = false;
+    notifyListeners();
+  } catch (e) {
+    errorMessage = e.toString();
+    isLoading = false;
+    notifyListeners();
+  }
+}
+Future<bool> toggleProductStatus({
+  required String productId,
+  required bool isActive,
+}) async {
+  try {
+    isLoading = true;
+    notifyListeners();
+
+    await _adminRepo.toggleProductStatus(
+      productId: productId,
+      isActive: isActive,
+    );
+
+    isLoading = false;
+    notifyListeners();
+
+    return true;
+  } catch (e) {
+    errorMessage = e.toString();
+    isLoading = false;
+    notifyListeners();
+    return false;
+  }
+}
+List<ProductModel> getLowStockProducts() {
+  return adminProducts.where((p) {
+    return p.stock <= 5;
+  }).toList();
+}
+List<ProductModel> getOutOfStockProducts() {
+  return adminProducts.where((p) {
+    return p.stock == 0;
+  }).toList();
+}
   // Add Product
   Future<bool> addProduct(ProductModel product) async {
     try {
       isLoading = true;
+      errorMessage = null;
       notifyListeners();
 
-      await _firestore
-          .collection("products")
-          .doc(product.id)
-          .set(product.toMap());
-
-      // Update local cache
-      List<ProductModel> cachedProducts = _getCachedProducts();
-      cachedProducts.add(product);
-
-      await _saveProductsToCache(cachedProducts);
-
-      await _updateMeta();
+      await _adminRepo.addProduct(product);
 
       isLoading = false;
       notifyListeners();
@@ -46,6 +83,7 @@ class AdminController extends ChangeNotifier {
   Future<bool> updateProduct(ProductModel product) async {
     try {
       isLoading = true;
+      errorMessage = null;
       notifyListeners();
 
       final updatedProduct = ProductModel(
@@ -60,26 +98,10 @@ class AdminController extends ChangeNotifier {
         category: product.category,
         createdAt: product.createdAt,
         updatedAt: DateTime.now(),
+        isActive: product.isActive,
       );
 
-      await _firestore
-          .collection("products")
-          .doc(product.id)
-          .update(updatedProduct.toMap());
-
-      // Update local cache
-      List<ProductModel> cachedProducts = _getCachedProducts();
-
-      final index =
-          cachedProducts.indexWhere((p) => p.id == product.id);
-
-      if (index != -1) {
-        cachedProducts[index] = updatedProduct;
-      }
-
-      await _saveProductsToCache(cachedProducts);
-
-      await _updateMeta();
+      await _adminRepo.updateProduct(updatedProduct);
 
       isLoading = false;
       notifyListeners();
@@ -97,20 +119,10 @@ class AdminController extends ChangeNotifier {
   Future<bool> deleteProduct(String productId) async {
     try {
       isLoading = true;
+      errorMessage = null;
       notifyListeners();
 
-      await _firestore
-          .collection("products")
-          .doc(productId)
-          .delete();
-
-      // Remove from local cache
-      List<ProductModel> cachedProducts = _getCachedProducts();
-      cachedProducts.removeWhere((p) => p.id == productId);
-
-      await _saveProductsToCache(cachedProducts);
-
-      await _updateMeta();
+      await _adminRepo.deleteProduct(productId);
 
       isLoading = false;
       notifyListeners();
@@ -131,42 +143,13 @@ class AdminController extends ChangeNotifier {
   }) async {
     try {
       isLoading = true;
+      errorMessage = null;
       notifyListeners();
 
-      await _firestore
-          .collection("products")
-          .doc(productId)
-          .update({
-        "stock": newStock,
-        "updatedAt": DateTime.now().toIso8601String(),
-      });
-
-      List<ProductModel> cachedProducts = _getCachedProducts();
-
-      final index =
-          cachedProducts.indexWhere((p) => p.id == productId);
-
-      if (index != -1) {
-        final product = cachedProducts[index];
-
-        cachedProducts[index] = ProductModel(
-          id: product.id,
-          name: product.name,
-          description: product.description,
-          price: product.price,
-          images: product.images,
-          sizes: product.sizes,
-          stock: newStock,
-          gender: product.gender,
-          category: product.category,
-          createdAt: product.createdAt,
-          updatedAt: DateTime.now(),
-        );
-      }
-
-      await _saveProductsToCache(cachedProducts);
-
-      await _updateMeta();
+      await _adminRepo.updateStock(
+        productId: productId,
+        newStock: newStock,
+      );
 
       isLoading = false;
       notifyListeners();
@@ -178,31 +161,5 @@ class AdminController extends ChangeNotifier {
       notifyListeners();
       return false;
     }
-  }
-
-  // Helpers
-
-  List<ProductModel> _getCachedProducts() {
-    final cached = _cacheService.getProducts();
-
-    return cached.map<ProductModel>((e) {
-      return ProductModel.fromMap(
-        Map<String, dynamic>.from(e),
-      );
-    }).toList();
-  }
-
-  Future<void> _saveProductsToCache(
-    List<ProductModel> products,
-  ) async {
-    await _cacheService.saveProducts(
-      products.map((e) => e.toMap()).toList(),
-    );
-  }
-
-  Future<void> _updateMeta() async {
-    await _firestore.collection("app_meta").doc("products").set({
-      "lastUpdated": DateTime.now().toIso8601String(),
-    });
   }
 }

@@ -1,6 +1,14 @@
 import 'package:hive/hive.dart';
 
 class CacheService {
+  // Singleton instance
+  static final CacheService _instance =
+      CacheService._internal();
+
+  factory CacheService() => _instance;
+
+  CacheService._internal();
+
   static const String productBoxName = "products";
   static const String cartBoxName = "cart";
   static const String userBoxName = "user";
@@ -17,7 +25,9 @@ class CacheService {
 
   // ---------------- PRODUCT CACHE ----------------
 
-  Future<void> saveProducts(List<Map<String, dynamic>> products) async {
+  Future<void> saveProducts(
+    List<Map<String, dynamic>> products,
+  ) async {
     await productBox.put("product_list", products);
   }
 
@@ -34,7 +44,9 @@ class CacheService {
 
   // ---------------- CART CACHE ----------------
 
-  Future<void> saveCart(List<Map<String, dynamic>> cartItems) async {
+  Future<void> saveCart(
+    List<Map<String, dynamic>> cartItems,
+  ) async {
     await cartBox.put("cart_items", cartItems);
   }
 
@@ -51,7 +63,9 @@ class CacheService {
 
   // ---------------- USER CACHE ----------------
 
-  Future<void> saveUser(Map<String, dynamic> userData) async {
+  Future<void> saveUser(
+    Map<String, dynamic> userData,
+  ) async {
     await userBox.put("user_data", userData);
   }
 

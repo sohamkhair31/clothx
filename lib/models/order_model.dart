@@ -48,7 +48,25 @@ class OrderModel {
       createdAt: DateTime.parse(map["createdAt"]),
     );
   }
-
+OrderModel copyWith({
+  String? orderId,
+  String? userId,
+  List<CartModel>? items,
+  double? totalAmount,
+  String? paymentStatus,
+  String? orderStatus,
+  DateTime? createdAt,
+}) {
+  return OrderModel(
+    orderId: orderId ?? this.orderId,
+    userId: userId ?? this.userId,
+    items: items ?? this.items,
+    totalAmount: totalAmount ?? this.totalAmount,
+    paymentStatus: paymentStatus ?? this.paymentStatus,
+    orderStatus: orderStatus ?? this.orderStatus,
+    createdAt: createdAt ?? this.createdAt,
+  );
+}
   String toJson() => jsonEncode(toMap());
 
   factory OrderModel.fromJson(String source) =>

@@ -12,27 +12,29 @@ class ProductController extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
+  // Main fetch logic
   Future<void> fetchProducts() async {
     try {
       isLoading = true;
+      errorMessage = null;
       notifyListeners();
 
-      // Load local cache first
+      // Step 1: Load cache first
       final cachedProducts = _cacheService.getProducts();
 
       if (cachedProducts.isNotEmpty) {
-        products = cachedProducts
-            .map<ProductModel>(
-              (e) => ProductModel.fromMap(
-                Map<String, dynamic>.from(e),
-              ),
-            )
-            .toList();
+        products = cachedProducts.map<ProductModel>((e) {
+          return ProductModel.fromMap(
+            Map<String, dynamic>.from(e),
+          );
+        }).toList();
+
+        print("Loaded from cache: ${products.length}");
 
         notifyListeners();
       }
 
-      // Get local latest update time
+      // Step 2: Find latest local update
       DateTime localLatest = DateTime(2000);
 
       if (products.isNotEmpty) {
@@ -41,24 +43,39 @@ class ProductController extends ChangeNotifier {
             .reduce((a, b) => a.isAfter(b) ? a : b);
       }
 
-      // Read metadata doc
+      print("Local latest: $localLatest");
+
+      // Step 3: Check server metadata
       final metaDoc = await _firestore
           .collection("app_meta")
           .doc("products")
           .get();
 
+      if (!metaDoc.exists) {
+        print("No metadata found.");
+        isLoading = false;
+        notifyListeners();
+        return;
+      }
+
       final serverLastUpdated =
           DateTime.parse(metaDoc["lastUpdated"]);
 
-      // If server has newer data
+      print("Server latest: $serverLastUpdated");
+
+      // Step 4: Fetch only if server has updates
       if (serverLastUpdated.isAfter(localLatest)) {
         QuerySnapshot snapshot;
 
         if (products.isEmpty) {
-          // First time → fetch all
-          snapshot = await _firestore.collection("products").get();
+          // First time fetch all
+          snapshot = await _firestore
+              .collection("products")
+              .get();
+
+          print("Fetching all products...");
         } else {
-          // Fetch only updated/new products
+          // Fetch only updated products
           snapshot = await _firestore
               .collection("products")
               .where(
@@ -66,6 +83,8 @@ class ProductController extends ChangeNotifier {
                 isGreaterThan: localLatest.toIso8601String(),
               )
               .get();
+
+          print("Fetching updated products only...");
         }
 
         final newProducts = snapshot.docs.map((doc) {
@@ -74,10 +93,13 @@ class ProductController extends ChangeNotifier {
           );
         }).toList();
 
-        // Merge into local list
+        print("Fetched from server: ${newProducts.length}");
+
+        // Merge products
         for (var newProduct in newProducts) {
-          final index =
-              products.indexWhere((p) => p.id == newProduct.id);
+          final index = products.indexWhere(
+            (p) => p.id == newProduct.id,
+          );
 
           if (index != -1) {
             products[index] = newProduct;
@@ -86,18 +108,51 @@ class ProductController extends ChangeNotifier {
           }
         }
 
-        // Save updated cache
+        // Save to cache
         await _cacheService.saveProducts(
           products.map((e) => e.toMap()).toList(),
         );
+
+        print("Cache updated.");
+      } else {
+        print("No new updates. Using cache.");
       }
 
       isLoading = false;
       notifyListeners();
     } catch (e) {
       errorMessage = e.toString();
+
+      print("ProductController Error: $e");
+
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  // Load only from Hive
+  void loadFromCacheOnly() {
+    final cachedProducts = _cacheService.getProducts();
+
+    products = cachedProducts.map<ProductModel>((e) {
+      return ProductModel.fromMap(
+        Map<String, dynamic>.from(e),
+      );
+    }).toList();
+
+    print("Loaded only from cache: ${products.length}");
+
+    notifyListeners();
+  }
+
+  // Clear product cache
+  Future<void> clearLocalCache() async {
+    await _cacheService.clearProducts();
+
+    products.clear();
+
+    print("Product cache cleared.");
+
+    notifyListeners();
   }
 }
