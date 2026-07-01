@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/user_model.dart';
+import '../repositories/auth_repo.dart';
 
 class AuthController extends ChangeNotifier {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final AuthRepo _authRepo = AuthRepo();
 
   bool isLoading = false;
   String? errorMessage;
 
-  User? get currentUser => _auth.currentUser;
+  User? currentUser;
 
-  // Signup
   Future<bool> signUp({
     required String name,
     required String email,
@@ -25,28 +23,20 @@ class AuthController extends ChangeNotifier {
       isLoading = true;
       notifyListeners();
 
-      final credential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      final user = UserModel(
-        uid: credential.user!.uid,
+      final user = await _authRepo.signUp(
         name: name,
         email: email,
+        password: password,
         phone: phone,
         address: address,
       );
 
-      await _firestore
-          .collection("users")
-          .doc(user.uid)
-          .set(user.toMap());
+      currentUser = FirebaseAuth.instance.currentUser;
 
       isLoading = false;
       notifyListeners();
 
-      return true;
+      return user.uid.isNotEmpty;
     } catch (e) {
       errorMessage = e.toString();
       isLoading = false;
@@ -55,7 +45,6 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Login
   Future<bool> login({
     required String email,
     required String password,
@@ -64,7 +53,7 @@ class AuthController extends ChangeNotifier {
       isLoading = true;
       notifyListeners();
 
-      await _auth.signInWithEmailAndPassword(
+      currentUser = await _authRepo.login(
         email: email,
         password: password,
       );
@@ -72,7 +61,7 @@ class AuthController extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
 
-      return true;
+      return currentUser != null;
     } catch (e) {
       errorMessage = e.toString();
       isLoading = false;
@@ -81,27 +70,14 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  // Get user data
   Future<UserModel?> getUserData() async {
-    try {
-      final uid = _auth.currentUser!.uid;
-
-      final doc = await _firestore.collection("users").doc(uid).get();
-
-      if (doc.exists) {
-        return UserModel.fromMap(doc.data()!);
-      }
-
-      return null;
-    } catch (e) {
-      errorMessage = e.toString();
-      notifyListeners();
-      return null;
-    }
+    if (currentUser == null) return null;
+    return await _authRepo.getUserData(currentUser!.uid);
   }
 
-  // Logout
   Future<void> logout() async {
-    await _auth.signOut();
+    await _authRepo.logout();
+    currentUser = null;
+    notifyListeners();
   }
 }

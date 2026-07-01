@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 class ProductModel {
   final String id;
   final String name;
@@ -8,6 +9,8 @@ class ProductModel {
   final List<String> sizes;
   final int stock;
   final String category;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   ProductModel({
     required this.id,
@@ -18,9 +21,10 @@ class ProductModel {
     required this.sizes,
     required this.stock,
     required this.category,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
-  // Convert object -> Map (for Firebase/Hive)
   Map<String, dynamic> toMap() {
     return {
       "id": id,
@@ -31,10 +35,11 @@ class ProductModel {
       "sizes": sizes,
       "stock": stock,
       "category": category,
+      "createdAt": createdAt.toIso8601String(),
+      "updatedAt": updatedAt.toIso8601String(),
     };
   }
 
-  // Convert Map -> Object
   factory ProductModel.fromMap(Map<String, dynamic> map) {
     return ProductModel(
       id: map["id"] ?? "",
@@ -45,10 +50,11 @@ class ProductModel {
       sizes: List<String>.from(map["sizes"] ?? []),
       stock: map["stock"] ?? 0,
       category: map["category"] ?? "",
+      createdAt: DateTime.parse(map["createdAt"]),
+      updatedAt: DateTime.parse(map["updatedAt"]),
     );
   }
 
-  // JSON helpers
   String toJson() => jsonEncode(toMap());
 
   factory ProductModel.fromJson(String source) =>

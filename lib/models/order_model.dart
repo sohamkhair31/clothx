@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'cart_model.dart';
 
 class OrderModel {
@@ -8,6 +9,7 @@ class OrderModel {
   final double totalAmount;
   final String paymentStatus;
   final String orderStatus;
+  final DateTime createdAt;
 
   OrderModel({
     required this.orderId,
@@ -16,6 +18,7 @@ class OrderModel {
     required this.totalAmount,
     required this.paymentStatus,
     required this.orderStatus,
+    required this.createdAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +29,7 @@ class OrderModel {
       "totalAmount": totalAmount,
       "paymentStatus": paymentStatus,
       "orderStatus": orderStatus,
+      "createdAt": createdAt.toIso8601String(),
     };
   }
 
@@ -34,11 +38,14 @@ class OrderModel {
       orderId: map["orderId"] ?? "",
       userId: map["userId"] ?? "",
       items: List<CartModel>.from(
-        (map["items"] ?? []).map((x) => CartModel.fromMap(x)),
+        (map["items"] ?? []).map(
+          (x) => CartModel.fromMap(Map<String, dynamic>.from(x)),
+        ),
       ),
       totalAmount: (map["totalAmount"] ?? 0).toDouble(),
       paymentStatus: map["paymentStatus"] ?? "",
       orderStatus: map["orderStatus"] ?? "",
+      createdAt: DateTime.parse(map["createdAt"]),
     );
   }
 
