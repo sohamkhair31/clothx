@@ -11,6 +11,7 @@ class ProductModel {
   final String category;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String gender;
 
   ProductModel({
     required this.id,
@@ -23,6 +24,7 @@ class ProductModel {
     required this.category,
     required this.createdAt,
     required this.updatedAt,
+    required this.gender,
   });
 
   Map<String, dynamic> toMap() {
@@ -35,6 +37,7 @@ class ProductModel {
       "sizes": sizes,
       "stock": stock,
       "category": category,
+      "gender":gender,
       "createdAt": createdAt.toIso8601String(),
       "updatedAt": updatedAt.toIso8601String(),
     };
@@ -52,6 +55,7 @@ class ProductModel {
       category: map["category"] ?? "",
       createdAt: DateTime.parse(map["createdAt"]),
       updatedAt: DateTime.parse(map["updatedAt"]),
+      gender: map["gender"] ?? "unisex",
     );
   }
 

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../core/services/cache/cache_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+
+import 'firebase_options.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -9,7 +13,11 @@ void main() async {
 
   final cacheService = CacheService();
   await cacheService.init();
+  await Firebase.initializeApp(
 
+      options: DefaultFirebaseOptions.currentPlatform,
+
+  );
   runApp(const MyApp());
 }
 

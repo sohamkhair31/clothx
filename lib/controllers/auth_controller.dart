@@ -10,7 +10,7 @@ class AuthController extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
-  User? currentUser;
+  User? currentUser = FirebaseAuth.instance.currentUser;
 
   Future<bool> signUp({
     required String name,
@@ -21,6 +21,7 @@ class AuthController extends ChangeNotifier {
   }) async {
     try {
       isLoading = true;
+      errorMessage = null;
       notifyListeners();
 
       final user = await _authRepo.signUp(
@@ -51,6 +52,7 @@ class AuthController extends ChangeNotifier {
   }) async {
     try {
       isLoading = true;
+      errorMessage = null;
       notifyListeners();
 
       currentUser = await _authRepo.login(
@@ -73,6 +75,11 @@ class AuthController extends ChangeNotifier {
   Future<UserModel?> getUserData() async {
     if (currentUser == null) return null;
     return await _authRepo.getUserData(currentUser!.uid);
+  }
+
+  Future<bool> isAdmin() async {
+    if (currentUser == null) return false;
+    return await _authRepo.isAdmin(currentUser!.uid);
   }
 
   Future<void> logout() async {

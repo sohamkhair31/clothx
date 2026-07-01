@@ -1,63 +1,44 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/user_model.dart';
+import 'dart:convert';
+class UserModel {
+  final String uid;
+  final String name;
+  final String email;
+  final String phone;
+  final String address;
+  final String role;
+  UserModel({
+    required this.uid,
+    required this.name,
+    required this.email,
+    required this.phone,
+    required this.address,
+    required this.role,
+  });
 
-class AuthRepo {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  Map<String, dynamic> toMap() {
+    return {
+      "uid": uid,
+      "name": name,
+      "email": email,
+      "phone": phone,
+      "address": address,
+      "role": role,
+    };
+  }
 
-  // Signup
-  Future<UserModel> signUp({
-    required String name,
-    required String email,
-    required String password,
-    required String phone,
-    required String address,
-  }) async {
-    final credential = await _auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
+  factory UserModel.fromMap(Map<String, dynamic> map) {
+    return UserModel(
+      uid: map["uid"] ?? "",
+      name: map["name"] ?? "",
+      email: map["email"] ?? "",
+      phone: map["phone"] ?? "",
+      address: map["address"] ?? "",
+      role: map["role"] ?? ""
     );
-
-    final user = UserModel(
-      uid: credential.user!.uid,
-      name: name,
-      email: email,
-      phone: phone,
-      address: address,
-    );
-
-    await _firestore.collection("users").doc(user.uid).set(user.toMap());
-
-    return user;
   }
 
-  // Login
-  Future<User?> login({
-    required String email,
-    required String password,
-  }) async {
-    final credential = await _auth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+  String toJson() => jsonEncode(toMap());
 
-    return credential.user;
-  }
-
-  // Get User Data
-  Future<UserModel?> getUserData(String uid) async {
-    final doc = await _firestore.collection("users").doc(uid).get();
-
-    if (doc.exists) {
-      return UserModel.fromMap(doc.data()!);
-    }
-
-    return null;
-  }
-
-  // Logout
-  Future<void> logout() async {
-    await _auth.signOut();
-  }
+  factory UserModel.fromJson(String source) =>
+      UserModel.fromMap(jsonDecode(source));
 }

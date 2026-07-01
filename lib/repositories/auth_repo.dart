@@ -26,9 +26,13 @@ class AuthRepo {
       email: email,
       phone: phone,
       address: address,
+      role: "user", // default role
     );
 
-    await _firestore.collection("users").doc(user.uid).set(user.toMap());
+    await _firestore
+        .collection("users")
+        .doc(user.uid)
+        .set(user.toMap());
 
     return user;
   }
@@ -48,13 +52,25 @@ class AuthRepo {
 
   // Get User Data
   Future<UserModel?> getUserData(String uid) async {
-    final doc = await _firestore.collection("users").doc(uid).get();
+    final doc = await _firestore
+        .collection("users")
+        .doc(uid)
+        .get();
 
     if (doc.exists) {
       return UserModel.fromMap(doc.data()!);
     }
 
     return null;
+  }
+
+  // Check if admin
+  Future<bool> isAdmin(String uid) async {
+    final user = await getUserData(uid);
+
+    if (user == null) return false;
+
+    return user.role == "admin";
   }
 
   // Logout
