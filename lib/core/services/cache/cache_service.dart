@@ -88,4 +88,12 @@ class CacheService {
     await cartBox.clear();
     await userBox.clear();
   }
+
+  Future<void> saveLastMeta(String value) async {
+  await productBox.put("last_meta", value);
+}
+
+String? getLastMeta() {
+  return productBox.get("last_meta");
+}
 }

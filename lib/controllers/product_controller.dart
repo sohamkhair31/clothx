@@ -8,18 +8,28 @@ class ProductController extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final CacheService _cacheService = CacheService();
 
+  bool loadedFromCache = false;
+  bool loadedFromServer = false;
+
+  DateTime? lastCacheLoad;
+  DateTime? lastServerFetch;
+
   List<ProductModel> products = [];
+
   bool isLoading = false;
   String? errorMessage;
 
-  // Main fetch logic
   Future<void> fetchProducts() async {
     try {
       isLoading = true;
       errorMessage = null;
+
+      loadedFromCache = false;
+      loadedFromServer = false;
+
       notifyListeners();
 
-      // Step 1: Load cache first
+      // STEP 1: Load cache
       final cachedProducts = _cacheService.getProducts();
 
       if (cachedProducts.isNotEmpty) {
@@ -29,62 +39,54 @@ class ProductController extends ChangeNotifier {
           );
         }).toList();
 
+        loadedFromCache = true;
+        lastCacheLoad = DateTime.now();
+
         print("Loaded from cache: ${products.length}");
-
-        notifyListeners();
       }
 
-      // Step 2: Find latest local update
-      DateTime localLatest = DateTime(2000);
+      // STEP 2: Load saved meta
+      final localMeta = _cacheService.getLastMeta();
 
-      if (products.isNotEmpty) {
-        localLatest = products
-            .map((e) => e.updatedAt)
-            .reduce((a, b) => a.isAfter(b) ? a : b);
-      }
+      print("Local meta: $localMeta");
 
-      print("Local latest: $localLatest");
-
-      // Step 3: Check server metadata
+      // STEP 3: Fetch server meta
       final metaDoc = await _firestore
           .collection("app_meta")
           .doc("products")
           .get();
 
       if (!metaDoc.exists) {
-        print("No metadata found.");
+        print("No server metadata found.");
+
         isLoading = false;
         notifyListeners();
         return;
       }
 
-      final serverLastUpdated =
-          DateTime.parse(metaDoc["lastUpdated"]);
+      final serverMeta = metaDoc["lastUpdated"].toString();
 
-      print("Server latest: $serverLastUpdated");
+      print("Server meta: $serverMeta");
 
-      // Step 4: Fetch only if server has updates
-      if (serverLastUpdated.isAfter(localLatest)) {
+      // STEP 4: Compare meta
+      if (localMeta == null || localMeta != serverMeta) {
         QuerySnapshot snapshot;
 
         if (products.isEmpty) {
-          // First time fetch all
           snapshot = await _firestore
               .collection("products")
+              .where("isActive", isEqualTo: true)
               .get();
 
-          print("Fetching all products...");
+          print("First fetch: loading all products");
         } else {
-          // Fetch only updated products
           snapshot = await _firestore
               .collection("products")
-              .where(
-                "updatedAt",
-                isGreaterThan: localLatest.toIso8601String(),
-              )
+              .where("updatedAt", isGreaterThan: localMeta ?? "")
+              .where("isActive", isEqualTo: true)
               .get();
 
-          print("Fetching updated products only...");
+          print("Incremental fetch: loading updates only");
         }
 
         final newProducts = snapshot.docs.map((doc) {
@@ -92,6 +94,9 @@ class ProductController extends ChangeNotifier {
             doc.data() as Map<String, dynamic>,
           );
         }).toList();
+
+        loadedFromServer = true;
+        lastServerFetch = DateTime.now();
 
         print("Fetched from server: ${newProducts.length}");
 
@@ -108,14 +113,17 @@ class ProductController extends ChangeNotifier {
           }
         }
 
-        // Save to cache
+        // Save products
         await _cacheService.saveProducts(
           products.map((e) => e.toMap()).toList(),
         );
 
+        // Save latest meta
+        await _cacheService.saveLastMeta(serverMeta);
+
         print("Cache updated.");
       } else {
-        print("No new updates. Using cache.");
+        print("No changes. Using cache only.");
       }
 
       isLoading = false;
@@ -130,29 +138,39 @@ class ProductController extends ChangeNotifier {
     }
   }
 
-  // Load only from Hive
   void loadFromCacheOnly() {
     final cachedProducts = _cacheService.getProducts();
 
-    products = cachedProducts.map<ProductModel>((e) {
-      return ProductModel.fromMap(
-        Map<String, dynamic>.from(e),
-      );
-    }).toList();
+    if (cachedProducts.isNotEmpty) {
+      products = cachedProducts.map<ProductModel>((e) {
+        return ProductModel.fromMap(
+          Map<String, dynamic>.from(e),
+        );
+      }).toList();
 
-    print("Loaded only from cache: ${products.length}");
+      loadedFromCache = true;
+      lastCacheLoad = DateTime.now();
+
+      print("Loaded only from cache: ${products.length}");
+    }
 
     notifyListeners();
   }
 
-  // Clear product cache
   Future<void> clearLocalCache() async {
     await _cacheService.clearProducts();
 
     products.clear();
 
+    loadedFromCache = false;
+    loadedFromServer = false;
+
+    lastCacheLoad = null;
+    lastServerFetch = null;
+
     print("Product cache cleared.");
 
     notifyListeners();
   }
+  
 }
