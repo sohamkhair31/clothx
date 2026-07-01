@@ -1,9 +1,8 @@
-import 'dart:io';
 
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:clothx/core/services/image/cloudinary_service.dart';
 import 'package:flutter/material.dart';
-
 import '../models/product_model.dart';
 import '../repositories/admin_repo.dart';
 
@@ -45,77 +44,108 @@ adminProducts =
     }
   }
 
-  // Add product (real with image upload)
-  Future<bool> addProduct({
-    required String name,
-    required String description,
-    required double price,
-required List<XFile> imageFiles,
-    required List<String> sizes,
-    required int stock,
-    required String gender,
-    required String category,
-  }) async {
-    try {
-      isLoading = true;
-      errorMessage = null;
-      notifyListeners();
+Future<bool> addProduct({
+  required String name,
+  required String description,
+  required double price,
+  required List<XFile> imageFiles,
+  required List<String> sizes,
+  required int stock,
+  required String gender,
+  required String category,
+}) async {
+  try {
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
 
-      List<String> imageUrls = [];
-for (var image in imageFiles) {
-  final uploadedUrl =
-      await _cloudinaryService.uploadImage(
-    imageBytes: await image.readAsBytes(),
-    fileName: image.name,
-    gender: gender,
-    category: category,
-  );
+    // Validate inputs first
+    if (name.trim().isEmpty ||
+        description.trim().isEmpty ||
+        price <= 0 ||
+        stock < 0 ||
+        imageFiles.isEmpty ||
+        sizes.isEmpty) {
+      throw Exception("Invalid product data");
+    }
 
-  if (uploadedUrl != null) {
-    imageUrls.add(uploadedUrl);
-  }
-}
-if (imageUrls.length != imageFiles.length) {
-  throw Exception("Some images failed to upload");
-}
-if (imageUrls.isEmpty) {
-  throw Exception("Image upload failed");
-}
-      final product = ProductModel(
-        id: DateTime.now()
-            .millisecondsSinceEpoch
-            .toString(),
-        name: name,
-        description: description,
-        price: price,
-        images: imageUrls,
-        sizes: sizes,
-        stock: stock,
-        gender: gender,
-        category: category,
-        isActive: true,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+    List<String> imageUrls = [];
+
+    // Upload images one by one
+    for (var image in imageFiles) {
+      final originalBytes = await image.readAsBytes();
+
+      print("Uploading: ${image.name}");
+      print("Original size: ${originalBytes.length}");
+
+      // Compress image
+      final compressedBytes =
+          await FlutterImageCompress.compressWithList(
+        originalBytes,
+        format: CompressFormat.webp,
+        quality: 75,
       );
 
-      await _adminRepo.addProduct(product);
+      print("Compressed size: ${compressedBytes.length}");
 
-      adminProducts.add(product);
+      // Upload to Cloudinary
+      final uploadedUrl =
+          await _cloudinaryService.uploadImage(
+        imageBytes: compressedBytes,
+        fileName: image.name,
+        gender: gender,
+        category: category,
+      );
 
-      isLoading = false;
-      notifyListeners();
-
-      return true;
-    } catch (e) {
-      errorMessage = e.toString();
-
-      isLoading = false;
-      notifyListeners();
-
-      return false;
+      if (uploadedUrl != null) {
+        imageUrls.add(uploadedUrl);
+        print("Uploaded: $uploadedUrl");
+      }
     }
-  }
 
+    // Check upload success
+    if (imageUrls.length != imageFiles.length) {
+      throw Exception("Some images failed to upload");
+    }
+
+    final now = DateTime.now();
+
+    final product = ProductModel(
+      id: now.millisecondsSinceEpoch.toString(),
+      name: name.trim(),
+      description: description.trim(),
+      price: price,
+      images: imageUrls,
+      sizes: sizes,
+      stock: stock,
+      gender: gender,
+      category: category,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    // Save product (repo already updates app_meta)
+    await _adminRepo.addProduct(product);
+
+    // Update local state
+    adminProducts.add(product);
+
+    isLoading = false;
+    notifyListeners();
+
+    return true;
+  } catch (e) {
+    errorMessage = e.toString();
+
+    print("Add Product Error: $e");
+
+    isLoading = false;
+    notifyListeners();
+
+    return false;
+  }
+}
   // Update product
   Future<bool> updateProduct(ProductModel product) async {
     try {

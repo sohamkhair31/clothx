@@ -96,4 +96,21 @@ class CacheService {
 String? getLastMeta() {
   return productBox.get("last_meta");
 }
+
+Future<void> saveReviews(
+  String productId,
+  List<Map<String, dynamic>> reviews,
+) async {
+  await productBox.put(
+    "reviews_$productId",
+    reviews,
+  );
+}
+
+List getReviews(String productId) {
+  return productBox.get(
+    "reviews_$productId",
+    defaultValue: [],
+  );
+}
 }

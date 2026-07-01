@@ -11,7 +11,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:clothx/controllers/admin_order_controller.dart';
 import '../core/services/cache/cache_service.dart';
 import 'firebase_options.dart';
-
+import 'controllers/review_controller.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -45,6 +45,9 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => AdminController(),
         ),
+            ChangeNotifierProvider(
+      create: (_) => ReviewController(),
+    ),
       ],
       child: const MyApp(),
     ),

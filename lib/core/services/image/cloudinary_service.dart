@@ -51,4 +51,49 @@ class CloudinaryService {
       return null;
     }
   }
+  Future<String?> uploadReviewImage({
+  required Uint8List imageBytes,
+  required String fileName,
+  required String productId,
+}) async {
+  try {
+    final url = Uri.parse(
+      "https://api.cloudinary.com/v1_1/${AppSecrets.cloudName}/image/upload",
+    );
+
+    final request = http.MultipartRequest(
+      "POST",
+      url,
+    );
+
+    request.fields["upload_preset"] =
+        AppSecrets.uploadPreset;
+
+    request.fields["folder"] =
+        "reviews/$productId";
+
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        "file",
+        imageBytes,
+        filename: fileName,
+      ),
+    );
+
+    final response = await request.send();
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(
+        await response.stream.bytesToString(),
+      );
+
+      return data["secure_url"];
+    }
+
+    return null;
+  } catch (e) {
+    print(e);
+    return null;
+  }
+}
 }

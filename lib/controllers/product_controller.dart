@@ -5,7 +5,9 @@ import '../models/product_model.dart';
 import '../core/services/cache/cache_service.dart';
 
 class ProductController extends ChangeNotifier {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore =
+      FirebaseFirestore.instance;
+
   final CacheService _cacheService = CacheService();
 
   bool loadedFromCache = false;
@@ -29,8 +31,11 @@ class ProductController extends ChangeNotifier {
 
       notifyListeners();
 
-      // STEP 1: Load cache
-      final cachedProducts = _cacheService.getProducts();
+      // =========================
+      // STEP 1: LOAD CACHE
+      // =========================
+      final cachedProducts =
+          _cacheService.getProducts();
 
       if (cachedProducts.isNotEmpty) {
         products = cachedProducts.map<ProductModel>((e) {
@@ -42,15 +47,30 @@ class ProductController extends ChangeNotifier {
         loadedFromCache = true;
         lastCacheLoad = DateTime.now();
 
-        print("Loaded from cache: ${products.length}");
+        print(
+          "Loaded from cache: ${products.length}",
+        );
       }
 
-      // STEP 2: Load saved meta
-      final localMeta = _cacheService.getLastMeta();
+      // =========================
+      // STEP 2: LOAD LOCAL META
+      // =========================
+      final localMetaString =
+          _cacheService.getLastMeta();
+
+      Timestamp? localMeta;
+
+      if (localMetaString != null) {
+        localMeta = Timestamp.fromDate(
+          DateTime.parse(localMetaString),
+        );
+      }
 
       print("Local meta: $localMeta");
 
-      // STEP 3: Fetch server meta
+      // =========================
+      // STEP 3: SERVER META
+      // =========================
       final metaDoc = await _firestore
           .collection("app_meta")
           .doc("products")
@@ -64,29 +84,74 @@ class ProductController extends ChangeNotifier {
         return;
       }
 
-      final serverMeta = metaDoc["lastUpdated"].toString();
+      final rawServerMeta =
+          metaDoc["lastUpdated"];
+
+      Timestamp serverMeta;
+
+      if (rawServerMeta is Timestamp) {
+        serverMeta = rawServerMeta;
+      } else if (rawServerMeta is String) {
+        serverMeta = Timestamp.fromDate(
+          DateTime.parse(rawServerMeta),
+        );
+      } else {
+        throw Exception(
+          "Invalid lastUpdated format",
+        );
+      }
 
       print("Server meta: $serverMeta");
 
-      // STEP 4: Compare meta
-      if (localMeta == null || localMeta != serverMeta) {
+      // =========================
+      // STEP 4: ONLY FETCH IF SERVER NEWER
+      // =========================
+      if (localMeta == null ||
+          serverMeta.compareTo(localMeta) > 0) {
         QuerySnapshot snapshot;
 
+        // FIRST FETCH
         if (products.isEmpty) {
           snapshot = await _firestore
               .collection("products")
-              .where("isActive", isEqualTo: true)
+              .where(
+                "isActive",
+                isEqualTo: true,
+              )
               .get();
 
-          print("First fetch: loading all products");
-        } else {
+          print(
+            "First fetch: loading all products",
+          );
+        }
+
+        // INCREMENTAL FETCH
+        else {
+          final latestProductTime = products
+              .map((e) => e.updatedAt)
+              .reduce(
+                (a, b) =>
+                    a.isAfter(b) ? a : b,
+              );
+
           snapshot = await _firestore
               .collection("products")
-              .where("updatedAt", isGreaterThan: localMeta ?? "")
-              .where("isActive", isEqualTo: true)
+              .where(
+                "updatedAt",
+                isGreaterThan:
+                    Timestamp.fromDate(
+                  latestProductTime,
+                ),
+              )
+              .where(
+                "isActive",
+                isEqualTo: true,
+              )
               .get();
 
-          print("Incremental fetch: loading updates only");
+          print(
+            "Incremental fetch: loading updated products only",
+          );
         }
 
         final newProducts = snapshot.docs.map((doc) {
@@ -98,9 +163,11 @@ class ProductController extends ChangeNotifier {
         loadedFromServer = true;
         lastServerFetch = DateTime.now();
 
-        print("Fetched from server: ${newProducts.length}");
+        print(
+          "Fetched from server: ${newProducts.length}",
+        );
 
-        // Merge products
+        // MERGE PRODUCTS
         for (var newProduct in newProducts) {
           final index = products.indexWhere(
             (p) => p.id == newProduct.id,
@@ -113,17 +180,21 @@ class ProductController extends ChangeNotifier {
           }
         }
 
-        // Save products
+        // SAVE PRODUCTS CACHE
         await _cacheService.saveProducts(
           products.map((e) => e.toMap()).toList(),
         );
 
-        // Save latest meta
-        await _cacheService.saveLastMeta(serverMeta);
+        // SAVE META CACHE
+        await _cacheService.saveLastMeta(
+          serverMeta.toDate().toIso8601String(),
+        );
 
         print("Cache updated.");
       } else {
-        print("No changes. Using cache only.");
+        print(
+          "No changes. Using cache only.",
+        );
       }
 
       isLoading = false;
@@ -131,15 +202,19 @@ class ProductController extends ChangeNotifier {
     } catch (e) {
       errorMessage = e.toString();
 
-      print("ProductController Error: $e");
+      print(
+        "ProductController Error: $e",
+      );
 
       isLoading = false;
       notifyListeners();
     }
   }
 
+  // CACHE ONLY
   void loadFromCacheOnly() {
-    final cachedProducts = _cacheService.getProducts();
+    final cachedProducts =
+        _cacheService.getProducts();
 
     if (cachedProducts.isNotEmpty) {
       products = cachedProducts.map<ProductModel>((e) {
@@ -151,12 +226,15 @@ class ProductController extends ChangeNotifier {
       loadedFromCache = true;
       lastCacheLoad = DateTime.now();
 
-      print("Loaded only from cache: ${products.length}");
+      print(
+        "Loaded only from cache: ${products.length}",
+      );
     }
 
     notifyListeners();
   }
 
+  // CLEAR CACHE
   Future<void> clearLocalCache() async {
     await _cacheService.clearProducts();
 
@@ -172,5 +250,4 @@ class ProductController extends ChangeNotifier {
 
     notifyListeners();
   }
-  
 }

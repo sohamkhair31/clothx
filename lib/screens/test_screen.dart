@@ -2,7 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import '../controllers/review_controller.dart';
+import '../models/review_model.dart';
 import 'package:image_picker/image_picker.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/admin_controller.dart';
@@ -26,13 +27,110 @@ class _TestScreenState extends State<TestScreen> {
   ProductModel? selectedProduct;
   String selectedSize = "M";
   int quantity = 1;
+  bool isLoading = false;
 final nameController = TextEditingController();
 final descController = TextEditingController();
 final priceController = TextEditingController();
 final stockController = TextEditingController();
+final reviewController = TextEditingController();
 
+double selectedRating = 5.0;
+
+List<XFile> selectedReviewImages = [];
 String selectedGender = "men";
 String selectedCategory = "hoodies";
+
+
+Future<void> showAddReviewDialog(
+  BuildContext context,
+  ProductModel product,
+) async {
+  final review = context.read<ReviewController>();
+  final auth = context.read<AuthController>();
+
+  showDialog(
+    context: context,
+    builder: (_) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text("Add Review"),
+            content: SingleChildScrollView(
+              child: Column(
+                children: [
+                  TextField(
+                    controller: reviewController,
+                    decoration: const InputDecoration(
+                      labelText: "Comment",
+                    ),
+                  ),
+
+                  Slider(
+                    min: 1,
+                    max: 5,
+                    divisions: 4,
+                    value: selectedRating,
+                    label: selectedRating.toString(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedRating = value;
+                      });
+                    },
+                  ),
+
+                  ElevatedButton(
+                    onPressed: () async {
+                      final picker = ImagePicker();
+
+                      final files =
+                          await picker.pickMultiImage();
+
+                      if (files.isNotEmpty) {
+                        selectedReviewImages = files;
+                      }
+
+                      setDialogState(() {});
+                    },
+                    child: const Text("Pick Review Images"),
+                  ),
+
+                  Text(
+                    "Images: ${selectedReviewImages.length}",
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () async {
+                  await review.addReview(
+                    productId: product.id,
+                    userId: auth.currentUser!.uid,
+                    userName: "Test User",
+                    comment: reviewController.text.trim(),
+                    rating: selectedRating,
+                    imageFiles: selectedReviewImages,
+                  );
+
+                  await review.fetchReviews(product.id);
+
+if (mounted) {
+  Navigator.pop(context);
+}
+
+                  reviewController.clear();
+                  selectedReviewImages.clear();
+                  selectedRating = 5;
+                },
+                child: const Text("Submit"),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
 Future<void> showAddProductDialog(
   BuildContext context,
 ) async {
@@ -209,39 +307,71 @@ if (pickedFiles.isNotEmpty) {
             ),
 
             actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Cancel"),
-              ),
+  TextButton(
+    onPressed: () => Navigator.pop(context),
+    child: const Text("Cancel"),
+  ),
 
-              ElevatedButton(
-                onPressed: () async {
-                  final result = await admin.addProduct(
-  name: nameController.text.trim(),
-  description: descController.text.trim(),
-  price: double.parse(priceController.text.trim()),
-  imageFiles: selectedImages,
-  sizes: selectedSizes,
-  stock: int.parse(stockController.text.trim()),
-  gender: selectedGender,
-  category: selectedCategory,
-);
-                  if (result) {
-                    Navigator.pop(context);
+  Consumer<AdminController>(
+    builder: (context, admin, _) {
+      return ElevatedButton(
+        onPressed: admin.isLoading
+            ? null
+            : () async {
+                final result = await admin.addProduct(
+                  name: nameController.text.trim(),
+                  description: descController.text.trim(),
+                  price: double.parse(
+                    priceController.text.trim(),
+                  ),
+                  imageFiles: selectedImages,
+                  sizes: selectedSizes,
+                  stock: int.parse(
+                    stockController.text.trim(),
+                  ),
+                  gender: selectedGender,
+                  category: selectedCategory,
+                );
 
-                    nameController.clear();
-                    descController.clear();
-                    priceController.clear();
-                    stockController.clear();
+                if (!mounted) return;
 
-                    selectedSizes.clear();
-                    selectedImages.clear();
-                  }
-                },
-                child: const Text("Add Product"),
-              ),
-            ],
-          );
+                if (result) {
+                  nameController.clear();
+                  descController.clear();
+                  priceController.clear();
+                  stockController.clear();
+
+                  selectedSizes.clear();
+                  selectedImages.clear();
+
+                  Navigator.pop(context);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        admin.errorMessage ??
+                            "Failed to add product",
+                      ),
+                    ),
+                  );
+                }
+              },
+        child: admin.isLoading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                ),
+              )
+            : const Text("Add Product"),
+      );
+    },
+  ),
+]
+          )
+          
+          ;
         },
       );
     },
@@ -397,12 +527,16 @@ Sizes: ${p.sizes.join(", ")}
                       ? const Icon(Icons.check)
                       : null,
 
-                  onTap: () {
+                  onTap: () async {
                     setState(() {
-                      selectedProduct = p;
-                      selectedSize = p.sizes.first;
-                      quantity = 1;
-                    });
+  selectedProduct = p;
+  selectedSize = p.sizes.first;
+  quantity = 1;
+});
+
+await context
+    .read<ReviewController>()
+    .fetchReviews(p.id);
                   },
                 ),
               );
@@ -486,6 +620,64 @@ Sizes: ${p.sizes.join(", ")}
                 },
                 child: const Text("Add To Cart"),
               ),
+
+              ElevatedButton(
+  onPressed: () {
+    showAddReviewDialog(
+      context,
+      selectedProduct!,
+    );
+  },
+  child: const Text("Add Review"),
+),
+sectionTitle("Product Reviews"),
+
+...context
+    .watch<ReviewController>()
+    .reviews
+    .map((review) {
+  return Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          Text(
+            review.userName,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          Text("⭐ ${review.rating}"),
+
+          Text(review.comment),
+
+          if (review.images.isNotEmpty)
+            SizedBox(
+              height: 100,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: review.images.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding:
+                        const EdgeInsets.all(8),
+                    child: Image.network(
+                      review.images[index],
+                      width: 100,
+                      fit: BoxFit.cover,
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+}),
             ],
 
             sectionTitle("Cart"),
