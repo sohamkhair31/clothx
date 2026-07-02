@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+
 import '../models/review_model.dart';
 import '../repositories/review_repo.dart';
 import '../core/services/cache/cache_service.dart';
@@ -14,32 +15,52 @@ class ReviewController extends ChangeNotifier {
 
   List<ReviewModel> reviews = [];
 
+  bool isLoading = false;
+  String? errorMessage;
+
   Future<void> fetchReviews(
     String productId,
   ) async {
-    final cached = _cache.getReviews(productId);
+    try {
+      isLoading = true;
+      errorMessage = null;
+      notifyListeners();
 
-    if (cached.isNotEmpty) {
-      reviews = cached.map<ReviewModel>((e) {
-        return ReviewModel.fromMap(
-          Map<String, dynamic>.from(e),
-        );
-      }).toList();
+      // Load cache first
+      final cached =
+          _cache.getReviews(productId);
 
+      if (cached.isNotEmpty) {
+        reviews =
+            cached.map<ReviewModel>((e) {
+          return ReviewModel.fromMap(
+            Map<String, dynamic>.from(e),
+          );
+        }).toList();
+
+        notifyListeners();
+      }
+
+      // Fetch fresh server data
+      final serverReviews =
+          await _repo.fetchReviews(productId);
+
+      reviews = serverReviews;
+
+      // Save cache
+      await _cache.saveReviews(
+        productId,
+        reviews.map((e) => e.toMap()).toList(),
+      );
+
+      isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      errorMessage = e.toString();
+
+      isLoading = false;
       notifyListeners();
     }
-
-    final serverReviews =
-        await _repo.fetchReviews(productId);
-
-    reviews = serverReviews;
-
-    await _cache.saveReviews(
-      productId,
-      reviews.map((e) => e.toMap()).toList(),
-    );
-
-    notifyListeners();
   }
 
   Future<void> addReview({
@@ -50,54 +71,69 @@ class ReviewController extends ChangeNotifier {
     required double rating,
     required List<XFile> imageFiles,
   }) async {
-    List<String> imageUrls = [];
+    try {
+      isLoading = true;
+      errorMessage = null;
+      notifyListeners();
 
-for (var image in imageFiles) {
-  // Read original bytes
-  final originalBytes = await image.readAsBytes();
+      List<String> imageUrls = [];
 
-  // Compress to WebP directly in memory
-  final compressedBytes =
-      await FlutterImageCompress.compressWithList(
-    originalBytes,
-    format: CompressFormat.webp,
-    quality: 75,
-  );
+      for (var image in imageFiles) {
+        final originalBytes =
+            await image.readAsBytes();
 
-  // Upload compressed review image
-  final url = await _cloudinary.uploadReviewImage(
-    imageBytes: compressedBytes,
-    fileName: image.name,
-    productId: productId,
-  );
+        final compressedBytes =
+            await FlutterImageCompress
+                .compressWithList(
+          originalBytes,
+          format: CompressFormat.webp,
+          quality: 75,
+        );
 
-  if (url != null) {
-    imageUrls.add(url);
-  }
-}
-    
-    final review = ReviewModel(
-      id: DateTime.now()
-          .millisecondsSinceEpoch
-          .toString(),
-      productId: productId,
-      userId: userId,
-      userName: userName,
-      comment: comment,
-      rating: rating,
-      images: imageUrls,
-      createdAt: DateTime.now(),
-    );
+        final url =
+            await _cloudinary
+                .uploadReviewImage(
+          imageBytes: compressedBytes,
+          fileName: image.name,
+          productId: productId,
+        );
 
-    await _repo.addReview(review);
+        if (url != null) {
+          imageUrls.add(url);
+        }
+      }
 
-    reviews.insert(0, review);
+      final review = ReviewModel(
+        id: DateTime.now()
+            .millisecondsSinceEpoch
+            .toString(),
+        productId: productId,
+        userId: userId,
+        userName: userName,
+        comment: comment,
+        rating: rating,
+        images: imageUrls,
+        createdAt: DateTime.now(),
+      );
 
-    await _cache.saveReviews(
-      productId,
-      reviews.map((e) => e.toMap()).toList(),
-    );
+      await _repo.addReview(review);
 
-    notifyListeners();
+      // Insert locally
+      reviews.insert(0, review);
+
+      // Update cache
+      await _cache.saveReviews(
+        productId,
+        reviews.map((e) => e.toMap()).toList(),
+      );
+
+      isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      errorMessage = e.toString();
+
+      isLoading = false;
+      notifyListeners();
+    }
   }
 }

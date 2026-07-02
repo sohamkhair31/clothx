@@ -1,54 +1,78 @@
-import 'package:clothx/controllers/admin_controller.dart';
-import 'package:clothx/controllers/auth_controller.dart';
-import 'package:clothx/controllers/cart_controller.dart';
-import 'package:clothx/controllers/order_controller.dart';
-import 'package:clothx/controllers/product_controller.dart';
-import 'package:clothx/screens/test_screen.dart';
+import 'package:clothx/screens/bottom_nav_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:clothx/controllers/admin_order_controller.dart';
-import '../core/services/cache/cache_service.dart';
+
 import 'firebase_options.dart';
+
+import 'core/theme/app_theme.dart';
+import 'core/services/cache/cache_service.dart';
+
+import 'controllers/auth_controller.dart';
+import 'controllers/product_controller.dart';
+import 'controllers/cart_controller.dart';
+import 'controllers/order_controller.dart';
+import 'controllers/admin_controller.dart';
+import 'controllers/admin_order_controller.dart';
 import 'controllers/review_controller.dart';
+
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Hive init
   await Hive.initFlutter();
 
   final cacheService = CacheService();
   await cacheService.init();
 
+  // Firebase init
   await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+    options:
+        DefaultFirebaseOptions.currentPlatform,
   );
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
-  create: (_) => AdminOrderController(),
-),
-        ChangeNotifierProvider(
-          create: (_) => AuthController(),
+          create: (_) =>
+              AuthController(),
         ),
+
         ChangeNotifierProvider(
-          create: (_) => ProductController(),
+          create: (_) =>
+              ProductController(),
         ),
+
         ChangeNotifierProvider(
-          create: (_) => CartController(),
+          create: (_) =>
+              CartController()
+                ..loadCart(),
         ),
+
         ChangeNotifierProvider(
-          create: (_) => OrderController(),
+          create: (_) =>
+              OrderController(),
         ),
+
         ChangeNotifierProvider(
-          create: (_) => AdminController(),
+          create: (_) =>
+              AdminController(),
         ),
-            ChangeNotifierProvider(
-      create: (_) => ReviewController(),
-    ),
+
+        ChangeNotifierProvider(
+          create: (_) =>
+              AdminOrderController(),
+        ),
+
+        ChangeNotifierProvider(
+          create: (_) =>
+              ReviewController(),
+        ),
       ],
+
       child: const MyApp(),
     ),
   );
@@ -60,12 +84,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ClothX',
+      title: "ClothX",
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const TestScreen(),
+
+      theme: AppTheme.lightTheme,
+
+      home: const BottomNavScreen(),
     );
   }
 }

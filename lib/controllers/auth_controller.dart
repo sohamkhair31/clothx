@@ -12,6 +12,10 @@ class AuthController extends ChangeNotifier {
 
   User? currentUser = FirebaseAuth.instance.currentUser;
 
+  UserModel? userData;
+
+  UserModel? get currentUserData => userData;
+
   Future<bool> signUp({
     required String name,
     required String email,
@@ -33,6 +37,9 @@ class AuthController extends ChangeNotifier {
       );
 
       currentUser = FirebaseAuth.instance.currentUser;
+
+      // fetch fresh user data
+      userData = await _authRepo.getUserData(user.uid);
 
       isLoading = false;
       notifyListeners();
@@ -60,6 +67,12 @@ class AuthController extends ChangeNotifier {
         password: password,
       );
 
+      if (currentUser != null) {
+        userData = await _authRepo.getUserData(
+          currentUser!.uid,
+        );
+      }
+
       isLoading = false;
       notifyListeners();
 
@@ -74,7 +87,14 @@ class AuthController extends ChangeNotifier {
 
   Future<UserModel?> getUserData() async {
     if (currentUser == null) return null;
-    return await _authRepo.getUserData(currentUser!.uid);
+
+    userData = await _authRepo.getUserData(
+      currentUser!.uid,
+    );
+
+    notifyListeners();
+
+    return userData;
   }
 
   Future<bool> isAdmin() async {
@@ -84,7 +104,10 @@ class AuthController extends ChangeNotifier {
 
   Future<void> logout() async {
     await _authRepo.logout();
+
     currentUser = null;
+    userData = null;
+
     notifyListeners();
   }
 }
