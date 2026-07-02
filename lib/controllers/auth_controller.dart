@@ -3,8 +3,6 @@ import 'package:clothx/repositories/auth_repo.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-
-
 class AuthController extends ChangeNotifier {
   final AuthRepo _authRepo = AuthRepo();
 
@@ -15,6 +13,26 @@ class AuthController extends ChangeNotifier {
       FirebaseAuth.instance.currentUser;
 
   UserModel? currentUserData;
+
+  // Listen auth changes
+  AuthController() {
+    FirebaseAuth.instance
+        .authStateChanges()
+        .listen((user) async {
+      currentUser = user;
+
+      if (user != null) {
+        currentUserData =
+            await _authRepo.getUserData(
+          user.uid,
+        );
+      } else {
+        currentUserData = null;
+      }
+
+      notifyListeners();
+    });
+  }
 
   // ================= SIGNUP =================
   Future<bool> signUp({
@@ -29,7 +47,7 @@ class AuthController extends ChangeNotifier {
       errorMessage = null;
       notifyListeners();
 
-      final user = await _authRepo.signUp(
+      await _authRepo.signUp(
         name: name,
         email: email,
         password: password,
@@ -50,13 +68,11 @@ class AuthController extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
 
-      return user.uid.isNotEmpty;
+      return currentUser != null;
     } catch (e) {
       errorMessage = e.toString();
-
       isLoading = false;
       notifyListeners();
-
       return false;
     }
   }
@@ -71,10 +87,13 @@ class AuthController extends ChangeNotifier {
       errorMessage = null;
       notifyListeners();
 
-      currentUser = await _authRepo.login(
-        email: email,
-        password: password,
-      );
+final credential =
+    await _authRepo.login(
+  email: email,
+  password: password,
+);
+
+currentUser = credential.user;
 
       if (currentUser != null) {
         currentUserData =
@@ -89,10 +108,8 @@ class AuthController extends ChangeNotifier {
       return currentUser != null;
     } catch (e) {
       errorMessage = e.toString();
-
       isLoading = false;
       notifyListeners();
-
       return false;
     }
   }
@@ -116,10 +133,8 @@ class AuthController extends ChangeNotifier {
       return currentUserData;
     } catch (e) {
       errorMessage = e.toString();
-
       isLoading = false;
       notifyListeners();
-
       return null;
     }
   }
@@ -142,4 +157,50 @@ class AuthController extends ChangeNotifier {
 
     notifyListeners();
   }
+  Future<bool> updateProfile({
+  required String name,
+  required String phone,
+  required String address,
+}) async {
+  try {
+
+    if (currentUser == null) return false;
+if (currentUserData != null &&
+    currentUserData!.name == name &&
+    currentUserData!.phone == phone &&
+    currentUserData!.address == address) {
+isLoading = false;
+notifyListeners();
+return true;
+}
+    isLoading = true;
+    notifyListeners();
+
+    await _authRepo.updateUser(
+      uid: currentUser!.uid,
+      name: name,
+      phone: phone,
+      address: address,
+    );
+
+    currentUserData =
+        currentUserData?.copyWith(
+      name: name,
+      phone: phone,
+      address: address,
+    );
+
+    isLoading = false;
+    notifyListeners();
+
+    return true;
+  } catch (e) {
+    errorMessage = e.toString();
+
+    isLoading = false;
+    notifyListeners();
+
+    return false;
+  }
+}
 }

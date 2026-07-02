@@ -32,10 +32,10 @@ Future<void> placeOrder(OrderModel order) async {
   }
 
   // Save order
-  await _firestore
-      .collection("orders")
-      .doc(order.orderId)
-      .set(order.toMap());
+await _firestore
+    .collection("orders")
+    .doc(order.orderId)
+    .set(order.toFirestoreMap());
 
   // Reduce stock
   await _reduceStock(order);

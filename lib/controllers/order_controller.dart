@@ -19,21 +19,24 @@ class OrderController extends ChangeNotifier {
   String? errorMessage;
 
   // ================= LOAD CACHE =================
-void loadOrdersFromCache(String userId) {
-  final cachedOrders =
-      _cacheService.getOrders(userId);
+  void loadOrdersFromCache(
+    String userId,
+  ) {
+    final cachedOrders =
+        _cacheService.getOrders(userId);
 
-  if (cachedOrders.isNotEmpty) {
-    orders =
-        cachedOrders.map<OrderModel>((e) {
-      return OrderModel.fromMap(
-        Map<String, dynamic>.from(e),
-      );
-    }).toList();
+    if (cachedOrders.isNotEmpty) {
+      orders =
+          cachedOrders.map<OrderModel>((e) {
+        return OrderModel.fromMap(
+          Map<String, dynamic>.from(e),
+        );
+      }).toList();
 
-    notifyListeners();
+      notifyListeners();
+    }
   }
-}
+
   // ================= PLACE ORDER =================
   Future<bool> placeOrder({
     required String userId,
@@ -61,16 +64,21 @@ void loadOrdersFromCache(String userId) {
         createdAt: DateTime.now(),
       );
 
+      print(
+        "Placing order for user: $userId",
+      );
+
       await _firestore
           .collection("orders")
           .doc(orderId)
-          .set(order.toMap());
+          .set(order.toFirestoreMap());
+
+      print("Order saved: $orderId");
 
       await cartController.clearCart();
 
       orders.insert(0, order);
 
-      // Save to cache
       await _cacheService.saveOrders(
         userId,
         orders.map((e) => e.toMap()).toList(),
@@ -83,6 +91,8 @@ void loadOrdersFromCache(String userId) {
     } catch (e) {
       errorMessage = e.toString();
 
+      print("Place Order Error: $e");
+
       isLoading = false;
       notifyListeners();
 
@@ -91,20 +101,26 @@ void loadOrdersFromCache(String userId) {
   }
 
   // ================= FETCH ORDERS =================
-  Future<void> fetchOrders(String userId) async {
+  Future<void> fetchOrders(
+    String userId,
+  ) async {
     try {
       isLoading = true;
       errorMessage = null;
       notifyListeners();
 
-      final snapshot = await _firestore
-          .collection("orders")
-          .where("userId", isEqualTo: userId)
-          .orderBy(
-            "createdAt",
-            descending: true,
-          )
-          .get();
+      print(
+        "Fetching orders for user: $userId",
+      );
+
+      final snapshot =
+          await _firestore
+              .collection("orders")
+              .where(
+                "userId",
+                isEqualTo: userId,
+              )
+              .get();
 
       orders = snapshot.docs.map((doc) {
         return OrderModel.fromMap(
@@ -112,16 +128,30 @@ void loadOrdersFromCache(String userId) {
         );
       }).toList();
 
-      // Save fresh server data to cache
+      // Sort locally
+      orders.sort(
+        (a, b) => b.createdAt.compareTo(
+          a.createdAt,
+        ),
+      );
+
       await _cacheService.saveOrders(
         userId,
         orders.map((e) => e.toMap()).toList(),
+      );
+
+      print(
+        "Orders fetched: ${orders.length}",
       );
 
       isLoading = false;
       notifyListeners();
     } catch (e) {
       errorMessage = e.toString();
+
+      print(
+        "Fetch Orders Error: $e",
+      );
 
       isLoading = false;
       notifyListeners();
@@ -145,31 +175,29 @@ void loadOrdersFromCache(String userId) {
       );
 
       if (index != -1) {
-        final updatedOrder = OrderModel(
-          orderId: orders[index].orderId,
-          userId: orders[index].userId,
-          items: orders[index].items,
-          totalAmount:
-              orders[index].totalAmount,
-          paymentStatus:
-              orders[index].paymentStatus,
+        final updatedOrder =
+            orders[index].copyWith(
           orderStatus: "Cancelled",
-          createdAt:
-              orders[index].createdAt,
         );
 
         orders[index] = updatedOrder;
 
-        // Update cache
         await _cacheService.saveOrders(
           updatedOrder.userId,
-          orders.map((e) => e.toMap()).toList(),
+          orders
+              .map((e) => e.toMap())
+              .toList(),
         );
       }
 
       notifyListeners();
     } catch (e) {
       errorMessage = e.toString();
+
+      print(
+        "Cancel Order Error: $e",
+      );
+
       notifyListeners();
     }
   }

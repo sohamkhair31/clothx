@@ -4,18 +4,23 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 
 class AuthRepo {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth =
+      FirebaseAuth.instance;
 
-  // Signup
-  Future<UserModel> signUp({
+  final FirebaseFirestore _firestore =
+      FirebaseFirestore.instance;
+
+  // ================= SIGNUP =================
+  Future<void> signUp({
     required String name,
     required String email,
     required String password,
     required String phone,
     required String address,
   }) async {
-    final credential = await _auth.createUserWithEmailAndPassword(
+    final credential =
+        await _auth
+            .createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
@@ -26,55 +31,76 @@ class AuthRepo {
       email: email,
       phone: phone,
       address: address,
-      role: "user", // default role
+      role: "user",
     );
 
     await _firestore
         .collection("users")
         .doc(user.uid)
         .set(user.toMap());
-
-    return user;
   }
 
-  // Login
-  Future<User?> login({
+  // ================= LOGIN =================
+  Future<UserCredential> login({
     required String email,
     required String password,
   }) async {
-    final credential = await _auth.signInWithEmailAndPassword(
+    return await _auth
+        .signInWithEmailAndPassword(
       email: email,
       password: password,
     );
-
-    return credential.user;
   }
 
-  // Get User Data
-  Future<UserModel?> getUserData(String uid) async {
-    final doc = await _firestore
-        .collection("users")
-        .doc(uid)
-        .get();
+  // ================= USER DATA =================
+  Future<UserModel?> getUserData(
+    String uid,
+  ) async {
+    final doc =
+        await _firestore
+            .collection("users")
+            .doc(uid)
+            .get();
 
-    if (doc.exists) {
-      return UserModel.fromMap(doc.data()!);
+    if (!doc.exists) return null;
+
+    return UserModel.fromMap(
+      doc.data()!,
+    );
+  }
+
+  // ================= ADMIN CHECK =================
+  Future<bool> isAdmin(
+    String uid,
+  ) async {
+    final user =
+        await getUserData(uid);
+
+    if (user == null) {
+      return false;
     }
-
-    return null;
-  }
-
-  // Check if admin
-  Future<bool> isAdmin(String uid) async {
-    final user = await getUserData(uid);
-
-    if (user == null) return false;
 
     return user.role == "admin";
   }
 
-  // Logout
+  // ================= LOGOUT =================
   Future<void> logout() async {
     await _auth.signOut();
   }
+
+  Future<void> updateUser({
+  required String uid,
+  required String name,
+  required String phone,
+  required String address,
+}) async {
+  await _firestore
+      .collection("users")
+      .doc(uid)
+      .update({
+    "name": name,
+    "phone": phone,
+    "address": address,
+  });
+}
 }

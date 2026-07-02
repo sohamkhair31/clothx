@@ -106,82 +106,109 @@ class _OrdersScreenState
                       final item =
                           order.orders[index];
 
-                      return Card(
-                        margin:
-                            const EdgeInsets.all(
-                          12,
-                        ),
-                        child: Padding(
-                          padding:
-                              const EdgeInsets.all(
-                            16,
-                          ),
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment
-                                    .start,
-                            children: [
-                              Text(
-                                "Order ID",
-                                style: AppTheme
-                                    .subHeading,
-                              ),
-                              Text(item.orderId),
+                     
+return Card(
+  margin: const EdgeInsets.all(12),
+  child: Padding(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Order ID",
+          style: AppTheme.subHeading,
+        ),
 
-                              const SizedBox(
-                                height: 10,
-                              ),
+        Text(item.orderId),
 
-                              Text(
-                                "Total: ₹${item.totalAmount}",
-                              ),
+        const SizedBox(height: 10),
 
-                              const SizedBox(
-                                height: 10,
-                              ),
+        Text(
+          "Total: ₹${item.totalAmount}",
+          style: AppTheme.body,
+        ),
 
-                              Container(
-                                padding:
-                                    const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration:
-                                    BoxDecoration(
-                                  color:
-                                      getStatusColor(
-                                    item.orderStatus,
-                                  ),
-                                  borderRadius:
-                                      BorderRadius.circular(
-                                    20,
-                                  ),
-                                ),
-                                child: Text(
-                                  item.orderStatus
-                                      .toUpperCase(),
-                                  style:
-                                      const TextStyle(
-                                    color:
-                                        Colors.white,
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
-                                ),
-                              ),
+        const SizedBox(height: 10),
 
-                              const SizedBox(
-                                height: 10,
-                              ),
+        Container(
+          padding:
+              const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color: getStatusColor(
+              item.orderStatus,
+            ),
+            borderRadius:
+                BorderRadius.circular(20),
+          ),
+          child: Text(
+            item.orderStatus.toUpperCase(),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
 
-                              Text(
-                                "Items: ${item.items.length}",
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+        const SizedBox(height: 15),
+
+        Text(
+          "Products",
+          style: AppTheme.subHeading,
+        ),
+
+        const SizedBox(height: 10),
+
+        ...item.items.map((cartItem) {
+          return ListTile(
+            contentPadding:
+                EdgeInsets.zero,
+            leading: Image.network(
+              cartItem.image,
+              width: 50,
+              height: 50,
+              fit: BoxFit.cover,
+            ),
+            title: Text(
+              cartItem.name,
+            ),
+            subtitle: Text(
+              "Size: ${cartItem.size} | Qty: ${cartItem.quantity}",
+            ),
+            trailing: Text(
+              "₹${cartItem.price}",
+            ),
+          );
+        }),
+
+        const SizedBox(height: 10),
+
+        if (item.orderStatus
+                .toLowerCase() ==
+            "pending")
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () async {
+                await context
+                    .read<OrderController>()
+                    .cancelOrder(
+                      item.orderId,
+                    );
+              },
+              child: const Text(
+                "Cancel Order",
+              ),
+            ),
+          ),
+      ],
+    ),
+  ),
+);
+                        },
                   ),
                 ),
     );

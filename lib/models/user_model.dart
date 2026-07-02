@@ -36,6 +36,20 @@ class UserModel {
       role: map["role"] ?? ""
     );
   }
+  UserModel copyWith({
+  String? name,
+  String? phone,
+  String? address,
+}) {
+  return UserModel(
+    uid: uid,
+    name: name ?? this.name,
+    email: email,
+    phone: phone ?? this.phone,
+    address: address ?? this.address,
+    role: role,
+  );
+}
 
   String toJson() => jsonEncode(toMap());
 

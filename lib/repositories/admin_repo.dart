@@ -5,7 +5,7 @@ class AdminRepo {
   final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
 
-  // Add product
+  // ================= ADD PRODUCT =================
   Future<void> addProduct(ProductModel product) async {
     await _firestore
         .collection("products")
@@ -15,21 +15,26 @@ class AdminRepo {
     await updateProductsMeta();
   }
 
-  // Update product
-  Future<void> updateProduct(ProductModel product) async {
+  // ================= UPDATE PRODUCT =================
+  Future<void> updateProduct(
+    ProductModel product,
+  ) async {
     await _firestore
         .collection("products")
         .doc(product.id)
         .update({
       ...product.toFirestoreMap(),
-      "updatedAt": FieldValue.serverTimestamp(),
+      "updatedAt":
+          FieldValue.serverTimestamp(),
     });
 
     await updateProductsMeta();
   }
 
-  // Delete product
-  Future<void> deleteProduct(String productId) async {
+  // ================= DELETE PRODUCT =================
+  Future<void> deleteProduct(
+    String productId,
+  ) async {
     await _firestore
         .collection("products")
         .doc(productId)
@@ -38,7 +43,7 @@ class AdminRepo {
     await updateProductsMeta();
   }
 
-  // Update stock
+  // ================= UPDATE STOCK =================
   Future<void> updateStock({
     required String productId,
     required int newStock,
@@ -48,13 +53,14 @@ class AdminRepo {
         .doc(productId)
         .update({
       "stock": newStock,
-      "updatedAt": FieldValue.serverTimestamp(),
+      "updatedAt":
+          FieldValue.serverTimestamp(),
     });
 
     await updateProductsMeta();
   }
 
-  // Toggle active/inactive
+  // ================= TOGGLE STATUS =================
   Future<void> toggleProductStatus({
     required String productId,
     required bool isActive,
@@ -64,31 +70,47 @@ class AdminRepo {
         .doc(productId)
         .update({
       "isActive": isActive,
-      "updatedAt": FieldValue.serverTimestamp(),
+      "updatedAt":
+          FieldValue.serverTimestamp(),
     });
 
     await updateProductsMeta();
   }
 
-  // Cache invalidation metadata
+  // ================= META UPDATE =================
   Future<void> updateProductsMeta() async {
     await _firestore
         .collection("app_meta")
         .doc("products")
         .set({
-      "lastUpdated": FieldValue.serverTimestamp(),
+      "lastUpdated":
+          FieldValue.serverTimestamp(),
     });
   }
 
-  // Get all products (admin side)
-  Future<List<ProductModel>> getAllProducts() async {
-    final snapshot = await _firestore
-        .collection("products")
-        .orderBy("createdAt", descending: true)
-        .get();
+  // ================= FETCH ADMIN PRODUCTS =================
+  Future<List<ProductModel>>
+      getAllProducts() async {
+    final snapshot =
+        await _firestore
+            .collection("products")
+            .get();
 
-    return snapshot.docs.map((doc) {
-      return ProductModel.fromMap(doc.data());
+    final products =
+        snapshot.docs.map((doc) {
+      return ProductModel.fromMap(
+        doc.data(),
+      );
     }).toList();
+
+    // Sort manually (safer than Firestore orderBy)
+    products.sort(
+      (a, b) =>
+          b.createdAt.compareTo(
+        a.createdAt,
+      ),
+    );
+
+    return products;
   }
 }

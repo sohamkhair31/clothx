@@ -91,9 +91,15 @@ class MyApp extends StatelessWidget {
 
       theme: AppTheme.lightTheme,
 
-home: context.watch<AuthController>().currentUser == null
-    ? const AuthScreen()
-    : const BottomNavScreen(),
+home: Consumer<AuthController>(
+  builder: (context, auth, _) {
+    if (auth.currentUser == null) {
+      return const AuthScreen();
+    }
+
+    return const BottomNavScreen();
+  },
+),
     );
   }
 }
