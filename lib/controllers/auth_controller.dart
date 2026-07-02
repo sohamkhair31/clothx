@@ -1,8 +1,9 @@
+import 'package:clothx/models/user_model.dart';
+import 'package:clothx/repositories/auth_repo.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../models/user_model.dart';
-import '../repositories/auth_repo.dart';
+
 
 class AuthController extends ChangeNotifier {
   final AuthRepo _authRepo = AuthRepo();
@@ -10,12 +11,12 @@ class AuthController extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
-  User? currentUser = FirebaseAuth.instance.currentUser;
+  User? currentUser =
+      FirebaseAuth.instance.currentUser;
 
-  UserModel? userData;
+  UserModel? currentUserData;
 
-  UserModel? get currentUserData => userData;
-
+  // ================= SIGNUP =================
   Future<bool> signUp({
     required String name,
     required String email,
@@ -36,10 +37,15 @@ class AuthController extends ChangeNotifier {
         address: address,
       );
 
-      currentUser = FirebaseAuth.instance.currentUser;
+      currentUser =
+          FirebaseAuth.instance.currentUser;
 
-      // fetch fresh user data
-      userData = await _authRepo.getUserData(user.uid);
+      if (currentUser != null) {
+        currentUserData =
+            await _authRepo.getUserData(
+          currentUser!.uid,
+        );
+      }
 
       isLoading = false;
       notifyListeners();
@@ -47,12 +53,15 @@ class AuthController extends ChangeNotifier {
       return user.uid.isNotEmpty;
     } catch (e) {
       errorMessage = e.toString();
+
       isLoading = false;
       notifyListeners();
+
       return false;
     }
   }
 
+  // ================= LOGIN =================
   Future<bool> login({
     required String email,
     required String password,
@@ -68,7 +77,8 @@ class AuthController extends ChangeNotifier {
       );
 
       if (currentUser != null) {
-        userData = await _authRepo.getUserData(
+        currentUserData =
+            await _authRepo.getUserData(
           currentUser!.uid,
         );
       }
@@ -79,34 +89,56 @@ class AuthController extends ChangeNotifier {
       return currentUser != null;
     } catch (e) {
       errorMessage = e.toString();
+
       isLoading = false;
       notifyListeners();
+
       return false;
     }
   }
 
+  // ================= GET USER DATA =================
   Future<UserModel?> getUserData() async {
     if (currentUser == null) return null;
 
-    userData = await _authRepo.getUserData(
-      currentUser!.uid,
-    );
+    try {
+      isLoading = true;
+      notifyListeners();
 
-    notifyListeners();
+      currentUserData =
+          await _authRepo.getUserData(
+        currentUser!.uid,
+      );
 
-    return userData;
+      isLoading = false;
+      notifyListeners();
+
+      return currentUserData;
+    } catch (e) {
+      errorMessage = e.toString();
+
+      isLoading = false;
+      notifyListeners();
+
+      return null;
+    }
   }
 
+  // ================= CHECK ADMIN =================
   Future<bool> isAdmin() async {
     if (currentUser == null) return false;
-    return await _authRepo.isAdmin(currentUser!.uid);
+
+    return await _authRepo.isAdmin(
+      currentUser!.uid,
+    );
   }
 
+  // ================= LOGOUT =================
   Future<void> logout() async {
     await _authRepo.logout();
 
     currentUser = null;
-    userData = null;
+    currentUserData = null;
 
     notifyListeners();
   }

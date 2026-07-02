@@ -5,7 +5,6 @@ import 'package:clothx/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
@@ -13,34 +12,42 @@ class CartScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final cart = context.watch<CartController>();
     final auth = context.watch<AuthController>();
+    final order =
+        context.watch<OrderController>();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("My Cart"),
       ),
-
       body: cart.cartItems.isEmpty
           ? Center(
               child: Text(
                 "Cart is empty",
-                style: AppTheme.subHeading,
+                style:
+                    AppTheme.subHeading,
               ),
             )
           : Column(
               children: [
                 Expanded(
                   child: ListView.builder(
-                    itemCount: cart.cartItems.length,
-                    itemBuilder: (context, index) {
+                    itemCount:
+                        cart.cartItems.length,
+                    itemBuilder:
+                        (context, index) {
                       final item =
                           cart.cartItems[index];
 
                       return Card(
                         margin:
-                            const EdgeInsets.all(10),
+                            const EdgeInsets.all(
+                          10,
+                        ),
                         child: Padding(
                           padding:
-                              const EdgeInsets.all(12),
+                              const EdgeInsets.all(
+                            12,
+                          ),
                           child: Row(
                             children: [
                               ClipRRect(
@@ -56,7 +63,8 @@ class CartScreen extends StatelessWidget {
                                 ),
                               ),
 
-                              const SizedBox(width: 15),
+                              const SizedBox(
+                                  width: 15),
 
                               Expanded(
                                 child: Column(
@@ -69,14 +77,11 @@ class CartScreen extends StatelessWidget {
                                       style:
                                           AppTheme.subHeading,
                                     ),
-
                                     const SizedBox(
                                         height: 5),
-
                                     Text(
                                       "Size: ${item.size}",
                                     ),
-
                                     Text(
                                       "₹${item.price}",
                                     ),
@@ -88,7 +93,9 @@ class CartScreen extends StatelessWidget {
                                 children: [
                                   IconButton(
                                     onPressed: () {
-                                      cart.decreaseQuantity(index);
+                                      cart.decreaseQuantity(
+                                        index,
+                                      );
                                     },
                                     icon: const Icon(
                                       Icons.remove,
@@ -102,10 +109,25 @@ class CartScreen extends StatelessWidget {
 
                                   IconButton(
                                     onPressed: () {
-                                     cart.increaseQuantity(index);
+                                      cart.increaseQuantity(
+                                        index,
+                                      );
                                     },
                                     icon: const Icon(
                                       Icons.add,
+                                    ),
+                                  ),
+
+                                  IconButton(
+                                    onPressed: () {
+                                      cart.removeItem(
+                                        index,
+                                      );
+                                    },
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color:
+                                          Colors.red,
                                     ),
                                   ),
                                 ],
@@ -120,8 +142,11 @@ class CartScreen extends StatelessWidget {
 
                 Container(
                   padding:
-                      const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
+                      const EdgeInsets.all(
+                    20,
+                  ),
+                  decoration:
+                      const BoxDecoration(
                     color: Colors.white,
                     boxShadow: [
                       BoxShadow(
@@ -151,55 +176,81 @@ class CartScreen extends StatelessWidget {
                         ],
                       ),
 
-                      const SizedBox(height: 15),
+                      const SizedBox(
+                        height: 15,
+                      ),
 
                       SizedBox(
                         width:
                             double.infinity,
                         child: ElevatedButton(
-                          onPressed: () async {
-                            if (auth.currentUser ==
-                                null) {
-                              ScaffoldMessenger.of(
-                                context,
-                              ).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    "Login required",
-                                  ),
-                                ),
-                              );
-                              return;
-                            }
+                          onPressed:
+                              order.isLoading
+                                  ? null
+                                  : () async {
+                                      if (auth
+                                              .currentUser ==
+                                          null) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content:
+                                                Text(
+                                              "Login required",
+                                            ),
+                                          ),
+                                        );
+                                        return;
+                                      }
 
-                            await context
-                                .read<
-                                    OrderController>()
-                                .placeOrder(
-                                  userId: auth
-                                      .currentUser!
-                                      .uid,
-                                  items:
-                                      cart.cartItems,
-                                  totalAmount:
-                                      cart.totalPrice,
-                                  cartController:
-                                      cart,
-                                );
+                                      final success =
+                                          await context
+                                              .read<
+                                                  OrderController>()
+                                              .placeOrder(
+                                                userId:
+                                                    auth.currentUser!.uid,
+                                                items:
+                                                    cart.cartItems,
+                                                totalAmount:
+                                                    cart.totalPrice,
+                                                cartController:
+                                                    cart,
+                                              );
 
-                            ScaffoldMessenger.of(
-                              context,
-                            ).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "Order placed successfully",
-                                ),
-                              ),
-                            );
-                          },
-                          child: const Text(
-                            "Checkout",
-                          ),
+                                      if (!context
+                                          .mounted) return;
+
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content:
+                                              Text(
+                                            success
+                                                ? "Order placed successfully"
+                                                : "Order failed",
+                                          ),
+                                        ),
+                                      );
+                                    },
+                          child:
+                              order.isLoading
+                                  ? const SizedBox(
+                                      height:
+                                          20,
+                                      width:
+                                          20,
+                                      child:
+                                          CircularProgressIndicator(
+                                        strokeWidth:
+                                            2,
+                                      ),
+                                    )
+                                  : const Text(
+                                      "Checkout",
+                                    ),
                         ),
                       ),
                     ],

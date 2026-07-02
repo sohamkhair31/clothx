@@ -1,5 +1,4 @@
-import 'dart:convert';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'cart_model.dart';
 
 class OrderModel {
@@ -25,32 +24,53 @@ class OrderModel {
     return {
       "orderId": orderId,
       "userId": userId,
-      "items": items.map((e) => e.toMap()).toList(),
+      "items":
+          items.map((e) => e.toMap()).toList(),
       "totalAmount": totalAmount,
       "paymentStatus": paymentStatus,
       "orderStatus": orderStatus,
-      "createdAt": createdAt.toIso8601String(),
+      "createdAt":
+          createdAt.toIso8601String(),
     };
   }
 
-  factory OrderModel.fromMap(Map<String, dynamic> map) {
+  factory OrderModel.fromMap(
+    Map<String, dynamic> map,
+  ) {
     return OrderModel(
       orderId: map["orderId"] ?? "",
       userId: map["userId"] ?? "",
-      items: List<CartModel>.from(
-        (map["items"] ?? []).map(
-          (x) => CartModel.fromMap(Map<String, dynamic>.from(x)),
-        ),
-      ),
-      totalAmount: (map["totalAmount"] ?? 0).toDouble(),
+
+      items:
+          (map["items"] as List<dynamic>? ?? [])
+              .map(
+                (e) => CartModel.fromMap(
+                  Map<String, dynamic>.from(e),
+                ),
+              )
+              .toList(),
+
+      totalAmount:
+          (map["totalAmount"] ?? 0)
+              .toDouble(),
+
       paymentStatus:
-    (map["paymentStatus"] ?? "").toString().toLowerCase(),
+          map["paymentStatus"] ?? "",
+
       orderStatus:
-    (map["orderStatus"] ?? "").toString().toLowerCase(),
-      createdAt: DateTime.parse(map["createdAt"]),
+          map["orderStatus"] ?? "",
+
+      createdAt:
+          map["createdAt"] is Timestamp
+              ? (map["createdAt"]
+                      as Timestamp)
+                  .toDate()
+              : DateTime.parse(
+                  map["createdAt"],
+                ),
     );
   }
-OrderModel copyWith({
+  OrderModel copyWith({
   String? orderId,
   String? userId,
   List<CartModel>? items,
@@ -63,14 +83,14 @@ OrderModel copyWith({
     orderId: orderId ?? this.orderId,
     userId: userId ?? this.userId,
     items: items ?? this.items,
-    totalAmount: totalAmount ?? this.totalAmount,
-    paymentStatus: paymentStatus ?? this.paymentStatus,
-    orderStatus: orderStatus ?? this.orderStatus,
-    createdAt: createdAt ?? this.createdAt,
+    totalAmount:
+        totalAmount ?? this.totalAmount,
+    paymentStatus:
+        paymentStatus ?? this.paymentStatus,
+    orderStatus:
+        orderStatus ?? this.orderStatus,
+    createdAt:
+        createdAt ?? this.createdAt,
   );
 }
-  String toJson() => jsonEncode(toMap());
-
-  factory OrderModel.fromJson(String source) =>
-      OrderModel.fromMap(jsonDecode(source));
 }

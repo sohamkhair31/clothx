@@ -8,10 +8,26 @@ import 'package:clothx/screens/product/product_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-
-
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() =>
+      _HomeScreenState();
+}
+
+class _HomeScreenState
+    extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() async {
+      await context
+          .read<ProductController>()
+          .fetchProducts();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,134 +53,176 @@ class HomeScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const CartScreen(),
+                  builder: (_) =>
+                      const CartScreen(),
                 ),
               );
             },
-            icon: const Icon(Icons.shopping_cart),
+            icon:
+                const Icon(Icons.shopping_cart),
           ),
         ],
       ),
-
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
-          children: [
-            // Banner
-            Container(
-              height: 180,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: AppTheme.primary,
-                borderRadius:
-                    BorderRadius.circular(20),
-              ),
-              child: const Center(
-                child: Text(
-                  "NEW COLLECTION 2026",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight:
-                        FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 30),
-
-            Text(
-              "Shop By Category",
-              style: AppTheme.heading,
-            ),
-
-            const SizedBox(height: 20),
-
-            Row(
-              children: [
-                Expanded(
-                  child: _categoryCard(
-                    context,
-                    "Men",
-                    () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              const MenScreen(),
+      body: productController.isLoading
+          ? const Center(
+              child:
+                  CircularProgressIndicator(),
+            )
+          : products.isEmpty
+              ? const Center(
+                  child:
+                      Text("No products found"),
+                )
+              : SingleChildScrollView(
+                  padding:
+                      const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        height: 180,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color:
+                              AppTheme.primary,
+                          borderRadius:
+                              BorderRadius.circular(
+                            20,
+                          ),
                         ),
-                      );
-                    },
-                  ),
-                ),
-
-                const SizedBox(width: 16),
-
-                Expanded(
-                  child: _categoryCard(
-                    context,
-                    "Women",
-                    () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              const WomenScreen(),
+                        child: const Center(
+                          child: Text(
+                            "NEW COLLECTION 2026",
+                            style: TextStyle(
+                              color:
+                                  Colors.white,
+                              fontSize: 24,
+                              fontWeight:
+                                  FontWeight
+                                      .bold,
+                            ),
+                          ),
                         ),
-                      );
-                    },
+                      ),
+
+                      const SizedBox(
+                          height: 30),
+
+                      Text(
+                        "Shop By Category",
+                        style:
+                            AppTheme.heading,
+                      ),
+
+                      const SizedBox(
+                          height: 20),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child:
+                                _categoryCard(
+                              context,
+                              "Men",
+                              () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const MenScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+
+                          const SizedBox(
+                              width: 16),
+
+                          Expanded(
+                            child:
+                                _categoryCard(
+                              context,
+                              "Women",
+                              () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const WomenScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(
+                          height: 30),
+
+                      Text(
+                        "Featured Products",
+                        style:
+                            AppTheme.heading,
+                      ),
+
+                      const SizedBox(
+                          height: 20),
+
+                      ...products.take(6).map(
+                            (product) =>
+                                _productCard(
+                              context,
+                              product,
+                            ),
+                          ),
+
+                      const SizedBox(
+                          height: 30),
+
+                      Text(
+                        "Men Picks",
+                        style:
+                            AppTheme.heading,
+                      ),
+
+                      const SizedBox(
+                          height: 20),
+
+                      ...menProducts.take(3).map(
+                            (product) =>
+                                _productCard(
+                              context,
+                              product,
+                            ),
+                          ),
+
+                      const SizedBox(
+                          height: 30),
+
+                      Text(
+                        "Women Picks",
+                        style:
+                            AppTheme.heading,
+                      ),
+
+                      const SizedBox(
+                          height: 20),
+
+                      ...womenProducts
+                          .take(3)
+                          .map(
+                            (product) =>
+                                _productCard(
+                              context,
+                              product,
+                            ),
+                          ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-
-            Text(
-              "Featured Products",
-              style: AppTheme.heading,
-            ),
-
-            const SizedBox(height: 20),
-
-            ...products.take(6).map(
-              (product) =>
-                  _productCard(context, product),
-            ),
-
-            const SizedBox(height: 30),
-
-            Text(
-              "Men Picks",
-              style: AppTheme.heading,
-            ),
-
-            const SizedBox(height: 20),
-
-            ...menProducts.take(3).map(
-              (product) =>
-                  _productCard(context, product),
-            ),
-
-            const SizedBox(height: 30),
-
-            Text(
-              "Women Picks",
-              style: AppTheme.heading,
-            ),
-
-            const SizedBox(height: 20),
-
-            ...womenProducts.take(3).map(
-              (product) =>
-                  _productCard(context, product),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -207,13 +265,9 @@ class HomeScreen extends StatelessWidget {
                 fit: BoxFit.cover,
               )
             : const Icon(Icons.image),
-
         title: Text(product.name),
-
-        subtitle: Text(
-          "₹${product.price}",
-        ),
-
+        subtitle:
+            Text("₹${product.price}"),
         onTap: () {
           Navigator.push(
             context,

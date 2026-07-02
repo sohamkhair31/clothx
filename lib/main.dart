@@ -1,4 +1,6 @@
+import 'package:clothx/screens/auth/auth_screen.dart';
 import 'package:clothx/screens/bottom_nav_screen.dart';
+import 'package:clothx/screens/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
@@ -89,7 +91,10 @@ class MyApp extends StatelessWidget {
 
       theme: AppTheme.lightTheme,
 
-      home: const BottomNavScreen(),
+home: context.watch<AuthController>().currentUser == null
+    ? const AuthScreen()
+    : const BottomNavScreen(),
     );
   }
 }
+
