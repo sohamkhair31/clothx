@@ -2,24 +2,59 @@ import 'package:flutter/material.dart';
 
 import '../models/order_model.dart';
 import '../repositories/admin_order_repo.dart';
+import '../core/services/cache/cache_service.dart';
 
 class AdminOrderController extends ChangeNotifier {
   final AdminOrderRepo _adminOrderRepo =
       AdminOrderRepo();
+
+  final CacheService _cacheService =
+      CacheService();
 
   List<OrderModel> orders = [];
 
   bool isLoading = false;
   String? errorMessage;
 
-  // Fetch all orders
+  // ================= LOAD CACHE FIRST =================
+  void loadOrdersFromCache() {
+    final cachedOrders =
+        _cacheService.getOrders("admin");
+
+    if (cachedOrders.isNotEmpty) {
+      orders =
+          cachedOrders.map<OrderModel>((e) {
+        return OrderModel.fromMap(
+          Map<String, dynamic>.from(e),
+        );
+      }).toList();
+
+      notifyListeners();
+    }
+  }
+
+  // ================= FETCH ALL ORDERS =================
   Future<void> fetchOrders() async {
     try {
       isLoading = true;
       errorMessage = null;
       notifyListeners();
 
-      orders = await _adminOrderRepo.getAllOrders();
+      orders =
+          await _adminOrderRepo.getAllOrders();
+
+      // latest first
+      orders.sort(
+        (a, b) => b.createdAt.compareTo(
+          a.createdAt,
+        ),
+      );
+
+      // Save cache
+      await _cacheService.saveOrders(
+        "admin",
+        orders.map((e) => e.toMap()).toList(),
+      );
 
       isLoading = false;
       notifyListeners();
@@ -31,7 +66,7 @@ class AdminOrderController extends ChangeNotifier {
     }
   }
 
-  // Update order status
+  // ================= UPDATE STATUS =================
   Future<bool> updateOrderStatus({
     required String orderId,
     required String status,
@@ -46,44 +81,22 @@ class AdminOrderController extends ChangeNotifier {
         status: status,
       );
 
-final index =
-    orders.indexWhere((o) => o.orderId == orderId);
-
-if (index != -1) {
-  orders[index] = orders[index].copyWith(
-    orderStatus: "cancelled",
-  );
-}
-
-      isLoading = false;
-      notifyListeners();
-
-      return true;
-    } catch (e) {
-      errorMessage = e.toString();
-
-      isLoading = false;
-      notifyListeners();
-
-      return false;
-    }
-  }
-
-  // Cancel order
-  Future<bool> cancelOrder(String orderId) async {
-    try {
-      isLoading = true;
-      errorMessage = null;
-      notifyListeners();
-
-      await _adminOrderRepo.cancelOrder(orderId);
-
-      final index =
-          orders.indexWhere((o) => o.orderId == orderId);
+      final index = orders.indexWhere(
+        (o) => o.orderId == orderId,
+      );
 
       if (index != -1) {
-        orders[index] = orders[index].copyWith(
-          orderStatus: "cancelled",
+        orders[index] =
+            orders[index].copyWith(
+          orderStatus: status,
+        );
+
+        // update cache
+        await _cacheService.saveOrders(
+          "admin",
+          orders
+              .map((e) => e.toMap())
+              .toList(),
         );
       }
 
@@ -101,24 +114,42 @@ if (index != -1) {
     }
   }
 
-  // Pending orders
+  // ================= CANCEL ORDER =================
+  Future<bool> cancelOrder(
+    String orderId,
+  ) async {
+    return await updateOrderStatus(
+      orderId: orderId,
+      status: "cancelled",
+    );
+  }
+
+  // ================= FILTERS =================
   List<OrderModel> getPendingOrders() {
     return orders.where((o) {
-      return o.orderStatus == "pending";
+      return o.orderStatus.toLowerCase() ==
+          "pending";
     }).toList();
   }
 
-  // Delivered orders
   List<OrderModel> getDeliveredOrders() {
     return orders.where((o) {
-      return o.orderStatus == "delivered";
+      return o.orderStatus.toLowerCase() ==
+          "delivered";
     }).toList();
   }
 
-  // Cancelled orders
   List<OrderModel> getCancelledOrders() {
     return orders.where((o) {
-      return o.orderStatus == "cancelled";
+      return o.orderStatus.toLowerCase() ==
+          "cancelled";
+    }).toList();
+  }
+
+  List<OrderModel> getShippedOrders() {
+    return orders.where((o) {
+      return o.orderStatus.toLowerCase() ==
+          "shipped";
     }).toList();
   }
 }

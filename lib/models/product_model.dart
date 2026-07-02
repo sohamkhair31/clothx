@@ -90,7 +90,39 @@ class ProductModel {
           : DateTime.parse(map["updatedAt"]),
     );
   }
-
+ProductModel copyWith({
+  String? id,
+  String? name,
+  String? description,
+  double? price,
+  List<String>? images,
+  List<String>? sizes,
+  int? stock,
+  String? gender,
+  String? category,
+  bool? isActive,
+  DateTime? createdAt,
+  DateTime? updatedAt,
+}) {
+  return ProductModel(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    description:
+        description ?? this.description,
+    price: price ?? this.price,
+    images: images ?? this.images,
+    sizes: sizes ?? this.sizes,
+    stock: stock ?? this.stock,
+    gender: gender ?? this.gender,
+    category: category ?? this.category,
+    isActive:
+        isActive ?? this.isActive,
+    createdAt:
+        createdAt ?? this.createdAt,
+    updatedAt:
+        updatedAt ?? this.updatedAt,
+  );
+}
   String toJson() => jsonEncode(toMap());
 
   factory ProductModel.fromJson(
@@ -99,4 +131,6 @@ class ProductModel {
       ProductModel.fromMap(
         jsonDecode(source),
       );
+
+
 }

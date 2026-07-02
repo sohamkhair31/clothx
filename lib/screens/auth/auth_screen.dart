@@ -1,6 +1,5 @@
 import 'package:clothx/controllers/auth_controller.dart';
 import 'package:clothx/screens/bottom_nav_screen.dart';
-import 'package:clothx/screens/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 

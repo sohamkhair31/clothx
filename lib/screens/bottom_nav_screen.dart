@@ -1,3 +1,4 @@
+import 'package:clothx/screens/admin/admin_dashboard_screen.dart';
 import 'package:clothx/screens/cart/cart_screen.dart';
 import 'package:clothx/screens/gender/men_screen.dart';
 import 'package:clothx/screens/gender/women_screen.dart';
