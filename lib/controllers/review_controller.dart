@@ -18,6 +18,9 @@ class ReviewController extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
+  static const int reviewLimit = 10;
+
+  // ================= FETCH REVIEWS =================
   Future<void> fetchReviews(
     String productId,
   ) async {
@@ -26,7 +29,7 @@ class ReviewController extends ChangeNotifier {
       errorMessage = null;
       notifyListeners();
 
-      // Load cache first
+      // STEP 1: LOAD CACHE FIRST
       final cached =
           _cache.getReviews(productId);
 
@@ -41,16 +44,45 @@ class ReviewController extends ChangeNotifier {
         notifyListeners();
       }
 
-      // Fetch fresh server data
+      // STEP 2: CHECK LOCAL META
+      final localMeta =
+          _cache.getReviewMeta(productId);
+
+      // STEP 3: SERVER META
+      final serverMeta =
+          await _repo.getReviewMeta(
+        productId,
+      );
+
+      // STEP 4: IF SAME SKIP FETCH
+      if (localMeta == serverMeta) {
+        print(
+          "Reviews unchanged. Using cache.",
+        );
+
+        isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      // STEP 5: FETCH LIMITED REVIEWS
       final serverReviews =
-          await _repo.fetchReviews(productId);
+          await _repo.fetchReviews(
+        productId,
+        limit: reviewLimit,
+      );
 
       reviews = serverReviews;
 
-      // Save cache
+      // STEP 6: UPDATE CACHE
       await _cache.saveReviews(
         productId,
         reviews.map((e) => e.toMap()).toList(),
+      );
+
+      await _cache.saveReviewMeta(
+        productId,
+        serverMeta,
       );
 
       isLoading = false;
@@ -58,11 +90,14 @@ class ReviewController extends ChangeNotifier {
     } catch (e) {
       errorMessage = e.toString();
 
+      print("Review fetch error: $e");
+
       isLoading = false;
       notifyListeners();
     }
   }
 
+  // ================= ADD REVIEW =================
   Future<void> addReview({
     required String productId,
     required String userId,
@@ -118,7 +153,7 @@ class ReviewController extends ChangeNotifier {
 
       await _repo.addReview(review);
 
-      // Insert locally
+      // Add local instantly
       reviews.insert(0, review);
 
       // Update cache
@@ -127,10 +162,18 @@ class ReviewController extends ChangeNotifier {
         reviews.map((e) => e.toMap()).toList(),
       );
 
+      // Update review meta
+      await _cache.saveReviewMeta(
+        productId,
+        DateTime.now().toIso8601String(),
+      );
+
       isLoading = false;
       notifyListeners();
     } catch (e) {
       errorMessage = e.toString();
+
+      print("Add review error: $e");
 
       isLoading = false;
       notifyListeners();

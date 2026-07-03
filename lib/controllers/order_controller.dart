@@ -18,6 +18,8 @@ class OrderController extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
+  static const int orderLimit = 20;
+
   // ================= LOAD CACHE =================
   void loadOrdersFromCache(
     String userId,
@@ -49,31 +51,33 @@ class OrderController extends ChangeNotifier {
       errorMessage = null;
       notifyListeners();
 
-      final orderId =
-          DateTime.now()
-              .millisecondsSinceEpoch
-              .toString();
+      final now = DateTime.now();
 
       final order = OrderModel(
-        orderId: orderId,
+        orderId:
+            now.millisecondsSinceEpoch
+                .toString(),
         userId: userId,
         items: items,
         totalAmount: totalAmount,
         paymentStatus: "Paid",
         orderStatus: "Pending",
-        createdAt: DateTime.now(),
-      );
-
-      print(
-        "Placing order for user: $userId",
+        createdAt: now,
       );
 
       await _firestore
           .collection("orders")
-          .doc(orderId)
+          .doc(order.orderId)
           .set(order.toFirestoreMap());
 
-      print("Order saved: $orderId");
+      // Update order meta
+      await _firestore
+          .collection("app_meta")
+          .doc("orders_$userId")
+          .set({
+        "lastUpdated":
+            Timestamp.fromDate(now),
+      });
 
       await cartController.clearCart();
 
@@ -91,8 +95,6 @@ class OrderController extends ChangeNotifier {
     } catch (e) {
       errorMessage = e.toString();
 
-      print("Place Order Error: $e");
-
       isLoading = false;
       notifyListeners();
 
@@ -101,63 +103,93 @@ class OrderController extends ChangeNotifier {
   }
 
   // ================= FETCH ORDERS =================
-  Future<void> fetchOrders(
-    String userId,
-  ) async {
-    try {
-      isLoading = true;
-      errorMessage = null;
-      notifyListeners();
+Future<void> fetchOrders(
+  String userId,
+) async {
+  try {
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
 
-      print(
-        "Fetching orders for user: $userId",
-      );
+    final localMeta =
+        _cacheService.getOrdersMeta(
+      userId,
+    );
 
-      final snapshot =
-          await _firestore
-              .collection("orders")
-              .where(
-                "userId",
-                isEqualTo: userId,
-              )
-              .get();
+    final metaDoc = await _firestore
+        .collection("app_meta")
+        .doc("orders_$userId")
+        .get();
 
-      orders = snapshot.docs.map((doc) {
-        return OrderModel.fromMap(
-          doc.data(),
+    if (metaDoc.exists) {
+      final serverMeta =
+          (metaDoc["lastUpdated"]
+                  as Timestamp)
+              .toDate()
+              .toIso8601String();
+
+      if (localMeta == serverMeta) {
+        print(
+          "Orders unchanged. Using cache.",
         );
-      }).toList();
 
-      // Sort locally
-      orders.sort(
-        (a, b) => b.createdAt.compareTo(
-          a.createdAt,
-        ),
-      );
-
-      await _cacheService.saveOrders(
-        userId,
-        orders.map((e) => e.toMap()).toList(),
-      );
-
-      print(
-        "Orders fetched: ${orders.length}",
-      );
-
-      isLoading = false;
-      notifyListeners();
-    } catch (e) {
-      errorMessage = e.toString();
-
-      print(
-        "Fetch Orders Error: $e",
-      );
-
-      isLoading = false;
-      notifyListeners();
+        isLoading = false;
+        notifyListeners();
+        return;
+      }
     }
-  }
 
+    final snapshot =
+        await _firestore
+            .collection("orders")
+            .where(
+              "userId",
+              isEqualTo: userId,
+            )
+            .orderBy(
+              "createdAt",
+              descending: true,
+            )
+            .limit(orderLimit)
+            .get();
+
+    orders = snapshot.docs.map((doc) {
+      return OrderModel.fromMap(
+        doc.data(),
+      );
+    }).toList();
+
+    await _cacheService.saveOrders(
+      userId,
+      orders.map((e) => e.toMap()).toList(),
+    );
+
+    if (metaDoc.exists) {
+      final serverMeta =
+          (metaDoc["lastUpdated"]
+                  as Timestamp)
+              .toDate()
+              .toIso8601String();
+
+      await _cacheService.saveOrdersMeta(
+        userId,
+        serverMeta,
+      );
+    }
+
+    isLoading = false;
+    notifyListeners();
+  } catch (e) {
+    errorMessage = e.toString();
+
+    print(
+      "Fetch Orders Error: $e",
+    );
+
+    isLoading = false;
+    notifyListeners();
+  }
+}
   // ================= CANCEL ORDER =================
   Future<void> cancelOrder(
     String orderId,
@@ -193,10 +225,6 @@ class OrderController extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       errorMessage = e.toString();
-
-      print(
-        "Cancel Order Error: $e",
-      );
 
       notifyListeners();
     }

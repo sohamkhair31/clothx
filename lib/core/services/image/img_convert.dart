@@ -1,14 +1,28 @@
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 
-Future<XFile?> convertToWebP(XFile file) async {
+Future<XFile?> convertToWebP(
+  XFile file,
+) async {
+  final outputPath = file.path
+      .replaceAll(
+        RegExp(r'\.\w+$'),
+        '.webp',
+      );
+
   final result =
       await FlutterImageCompress.compressAndGetFile(
     file.path,
-    "${file.path}.webp",
+    outputPath,
     format: CompressFormat.webp,
-    quality: 80,
+    quality: 65,
+    minWidth: 1200,
+    minHeight: 1200,
   );
 
-  return result;
+  if (result == null) {
+    return null;
+  }
+
+  return XFile(result.path);
 }

@@ -16,7 +16,9 @@ class AdminOrderController extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
-  // ================= LOAD CACHE FIRST =================
+  static const int orderLimit = 50;
+
+  // ================= LOAD CACHE =================
   void loadOrdersFromCache() {
     final cachedOrders =
         _cacheService.getOrders("admin");
@@ -33,21 +35,38 @@ class AdminOrderController extends ChangeNotifier {
     }
   }
 
-  // ================= FETCH ALL ORDERS =================
+  // ================= FETCH ORDERS =================
   Future<void> fetchOrders() async {
     try {
       isLoading = true;
       errorMessage = null;
       notifyListeners();
 
-      orders =
-          await _adminOrderRepo.getAllOrders();
+      // Local meta
+      final localMeta =
+          _cacheService.orderBox.get(
+        "orders_meta_admin",
+      );
 
-      // latest first
-      orders.sort(
-        (a, b) => b.createdAt.compareTo(
-          a.createdAt,
-        ),
+      // Server meta
+      final serverMeta =
+          await _adminOrderRepo.getOrdersMeta();
+
+      // If same, skip fetch
+      if (localMeta == serverMeta) {
+        print(
+          "Admin orders unchanged. Using cache.",
+        );
+
+        isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      // Fetch fresh
+      orders =
+          await _adminOrderRepo.getAllOrders(
+        limit: orderLimit,
       );
 
       // Save cache
@@ -56,10 +75,20 @@ class AdminOrderController extends ChangeNotifier {
         orders.map((e) => e.toMap()).toList(),
       );
 
+      // Save meta
+      await _cacheService.orderBox.put(
+        "orders_meta_admin",
+        serverMeta,
+      );
+
       isLoading = false;
       notifyListeners();
     } catch (e) {
       errorMessage = e.toString();
+
+      print(
+        "Admin fetch orders error: $e",
+      );
 
       isLoading = false;
       notifyListeners();
@@ -90,15 +119,13 @@ class AdminOrderController extends ChangeNotifier {
             orders[index].copyWith(
           orderStatus: status,
         );
-
-        // update cache
-        await _cacheService.saveOrders(
-          "admin",
-          orders
-              .map((e) => e.toMap())
-              .toList(),
-        );
       }
+
+      // Update local cache
+      await _cacheService.saveOrders(
+        "admin",
+        orders.map((e) => e.toMap()).toList(),
+      );
 
       isLoading = false;
       notifyListeners();
@@ -126,30 +153,34 @@ class AdminOrderController extends ChangeNotifier {
 
   // ================= FILTERS =================
   List<OrderModel> getPendingOrders() {
-    return orders.where((o) {
-      return o.orderStatus.toLowerCase() ==
-          "pending";
-    }).toList();
+    return orders.where(
+      (o) =>
+          o.orderStatus.toLowerCase() ==
+          "pending",
+    ).toList();
   }
 
   List<OrderModel> getDeliveredOrders() {
-    return orders.where((o) {
-      return o.orderStatus.toLowerCase() ==
-          "delivered";
-    }).toList();
+    return orders.where(
+      (o) =>
+          o.orderStatus.toLowerCase() ==
+          "delivered",
+    ).toList();
   }
 
   List<OrderModel> getCancelledOrders() {
-    return orders.where((o) {
-      return o.orderStatus.toLowerCase() ==
-          "cancelled";
-    }).toList();
+    return orders.where(
+      (o) =>
+          o.orderStatus.toLowerCase() ==
+          "cancelled",
+    ).toList();
   }
 
   List<OrderModel> getShippedOrders() {
-    return orders.where((o) {
-      return o.orderStatus.toLowerCase() ==
-          "shipped";
-    }).toList();
+    return orders.where(
+      (o) =>
+          o.orderStatus.toLowerCase() ==
+          "shipped",
+    ).toList();
   }
 }

@@ -8,29 +8,54 @@ class CacheService {
 
   CacheService._internal();
 
-  static const String productBoxName = "products";
-  static const String cartBoxName = "cart";
-  static const String userBoxName = "user";
-  static const String orderBoxName = "orders";
+  static const String productBoxName =
+      "products";
+  static const String reviewBoxName =
+      "reviews";
+  static const String cartBoxName =
+      "cart";
+  static const String userBoxName =
+      "user";
+  static const String orderBoxName =
+      "orders";
+  static const String adminBoxName =
+      "admin";
 
   late Box productBox;
+  late Box reviewBox;
   late Box cartBox;
   late Box userBox;
   late Box orderBox;
+  late Box adminBox;
 
   Future<void> init() async {
-    productBox = await Hive.openBox(productBoxName);
-    cartBox = await Hive.openBox(cartBoxName);
-    userBox = await Hive.openBox(userBoxName);
-    orderBox = await Hive.openBox(orderBoxName);
+    productBox =
+        await Hive.openBox(productBoxName);
+
+    reviewBox =
+        await Hive.openBox(reviewBoxName);
+
+    cartBox =
+        await Hive.openBox(cartBoxName);
+
+    userBox =
+        await Hive.openBox(userBoxName);
+
+    orderBox =
+        await Hive.openBox(orderBoxName);
+
+    adminBox =
+        await Hive.openBox(adminBoxName);
   }
 
   // ================= PRODUCTS =================
-
   Future<void> saveProducts(
     List<Map<String, dynamic>> products,
   ) async {
-    await productBox.put("product_list", products);
+    await productBox.put(
+      "product_list",
+      products,
+    );
   }
 
   List getProducts() {
@@ -41,11 +66,18 @@ class CacheService {
   }
 
   Future<void> clearProducts() async {
-    await productBox.delete("product_list");
+    await productBox.delete(
+      "product_list",
+    );
   }
 
-  Future<void> saveLastMeta(String value) async {
-    await productBox.put("last_meta", value);
+  Future<void> saveLastMeta(
+    String value,
+  ) async {
+    await productBox.put(
+      "last_meta",
+      value,
+    );
   }
 
   String? getLastMeta() {
@@ -53,19 +85,18 @@ class CacheService {
   }
 
   // ================= REVIEWS =================
-
   Future<void> saveReviews(
     String productId,
     List<Map<String, dynamic>> reviews,
   ) async {
-    await productBox.put(
+    await reviewBox.put(
       "reviews_$productId",
       reviews,
     );
   }
 
   List getReviews(String productId) {
-    return productBox.get(
+    return reviewBox.get(
       "reviews_$productId",
       defaultValue: [],
     );
@@ -75,30 +106,36 @@ class CacheService {
     String productId,
     String meta,
   ) async {
-    await productBox.put(
+    await reviewBox.put(
       "review_meta_$productId",
       meta,
     );
   }
 
-  String? getReviewMeta(String productId) {
-    return productBox.get(
+  String? getReviewMeta(
+    String productId,
+  ) {
+    return reviewBox.get(
       "review_meta_$productId",
     );
   }
 
-  Future<void> clearReviews(String productId) async {
-    await productBox.delete(
+  Future<void> clearReviews(
+    String productId,
+  ) async {
+    await reviewBox.delete(
       "reviews_$productId",
     );
   }
 
   // ================= CART =================
-
   Future<void> saveCart(
     List<Map<String, dynamic>> cartItems,
   ) async {
-    await cartBox.put("cart_items", cartItems);
+    await cartBox.put(
+      "cart_items",
+      cartItems,
+    );
   }
 
   List getCart() {
@@ -109,19 +146,24 @@ class CacheService {
   }
 
   Future<void> clearCart() async {
-    await cartBox.delete("cart_items");
+    await cartBox.delete(
+      "cart_items",
+    );
   }
 
   // ================= USER =================
-
   Future<void> saveUser(
     Map<String, dynamic> userData,
   ) async {
-    await userBox.put("user_data", userData);
+    await userBox.put(
+      "user_data",
+      userData,
+    );
   }
 
   Map<String, dynamic>? getUser() {
-    final data = userBox.get("user_data");
+    final data =
+        userBox.get("user_data");
 
     if (data == null) return null;
 
@@ -129,11 +171,12 @@ class CacheService {
   }
 
   Future<void> clearUser() async {
-    await userBox.delete("user_data");
+    await userBox.delete(
+      "user_data",
+    );
   }
 
   // ================= ORDERS =================
-
   Future<void> saveOrders(
     String userId,
     List<Map<String, dynamic>> orders,
@@ -151,19 +194,71 @@ class CacheService {
     );
   }
 
-  Future<void> clearOrders(String userId) async {
+  Future<void> saveOrdersMeta(
+    String userId,
+    String meta,
+  ) async {
+    await orderBox.put(
+      "orders_meta_$userId",
+      meta,
+    );
+  }
+
+  String? getOrdersMeta(
+    String userId,
+  ) {
+    return orderBox.get(
+      "orders_meta_$userId",
+    );
+  }
+
+  Future<void> clearOrders(
+    String userId,
+  ) async {
     await orderBox.delete(
       "orders_$userId",
     );
   }
 
-  // ================= CLEAR ALL =================
+  // ================= ADMIN =================
+  Future<void> saveAdminProducts(
+    List<Map<String, dynamic>> products,
+  ) async {
+    await adminBox.put(
+      "admin_products",
+      products,
+    );
+  }
 
+  List getAdminProducts() {
+    return adminBox.get(
+      "admin_products",
+      defaultValue: [],
+    );
+  }
+
+  Future<void> saveAdminMeta(
+    String meta,
+  ) async {
+    await adminBox.put(
+      "admin_meta",
+      meta,
+    );
+  }
+
+  String? getAdminMeta() {
+    return adminBox.get(
+      "admin_meta",
+    );
+  }
+
+  // ================= CLEAR ALL =================
   Future<void> clearAll() async {
     await productBox.clear();
+    await reviewBox.clear();
     await cartBox.clear();
     await userBox.clear();
     await orderBox.clear();
+    await adminBox.clear();
   }
-  
 }

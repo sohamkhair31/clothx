@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clothx/controllers/product_controller.dart';
 import 'package:clothx/core/theme/app_theme.dart';
 import 'package:clothx/models/product_model.dart';
@@ -29,6 +30,13 @@ class _HomeScreenState
     });
   }
 
+  String optimizeImage(String url) {
+    return url.replaceFirst(
+      "/upload/",
+      "/upload/f_auto,q_auto,w_300/",
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final productController =
@@ -36,12 +44,25 @@ class _HomeScreenState
 
     final products = productController.products;
 
+    final featured =
+        products.take(6).toList();
+
     final menProducts = products
-        .where((p) => p.gender == "men")
+        .where(
+          (p) =>
+              p.gender == "men" &&
+              !featured.contains(p),
+        )
+        .take(3)
         .toList();
 
     final womenProducts = products
-        .where((p) => p.gender == "women")
+        .where(
+          (p) =>
+              p.gender == "women" &&
+              !featured.contains(p),
+        )
+        .take(3)
         .toList();
 
     return Scaffold(
@@ -63,7 +84,8 @@ class _HomeScreenState
           ),
         ],
       ),
-      body: productController.isLoading
+      body: productController.isLoading &&
+              products.isEmpty
           ? const Center(
               child:
                   CircularProgressIndicator(),
@@ -73,155 +95,139 @@ class _HomeScreenState
                   child:
                       Text("No products found"),
                 )
-              : SingleChildScrollView(
+              : ListView(
                   padding:
                       const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        height: 180,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color:
-                              AppTheme.primary,
-                          borderRadius:
-                              BorderRadius.circular(
-                            20,
-                          ),
+                  children: [
+                    Container(
+                      height: 180,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color:
+                            AppTheme.primary,
+                        borderRadius:
+                            BorderRadius.circular(
+                          20,
                         ),
-                        child: const Center(
-                          child: Text(
-                            "NEW COLLECTION 2026",
-                            style: TextStyle(
-                              color:
-                                  Colors.white,
-                              fontSize: 24,
-                              fontWeight:
-                                  FontWeight
-                                      .bold,
-                            ),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          "NEW COLLECTION 2026",
+                          style: TextStyle(
+                            color:
+                                Colors.white,
+                            fontSize: 24,
+                            fontWeight:
+                                FontWeight.bold,
                           ),
                         ),
                       ),
+                    ),
 
-                      const SizedBox(
-                          height: 30),
+                    const SizedBox(height: 30),
 
-                      Text(
-                        "Shop By Category",
-                        style:
-                            AppTheme.heading,
-                      ),
+                    Text(
+                      "Shop By Category",
+                      style:
+                          AppTheme.heading,
+                    ),
 
-                      const SizedBox(
-                          height: 20),
+                    const SizedBox(height: 20),
 
-                      Row(
-                        children: [
-                          Expanded(
-                            child:
-                                _categoryCard(
-                              context,
-                              "Men",
-                              () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        const MenScreen(),
-                                  ),
-                                );
-                              },
-                            ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child:
+                              _categoryCard(
+                            context,
+                            "Men",
+                            () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const MenScreen(),
+                                ),
+                              );
+                            },
                           ),
+                        ),
 
-                          const SizedBox(
-                              width: 16),
+                        const SizedBox(width: 16),
 
-                          Expanded(
-                            child:
-                                _categoryCard(
-                              context,
-                              "Women",
-                              () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        const WomenScreen(),
-                                  ),
-                                );
-                              },
-                            ),
+                        Expanded(
+                          child:
+                              _categoryCard(
+                            context,
+                            "Women",
+                            () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const WomenScreen(),
+                                ),
+                              );
+                            },
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    Text(
+                      "Featured Products",
+                      style:
+                          AppTheme.heading,
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    ...featured.map(
+                      (product) =>
+                          _productCard(
+                        context,
+                        product,
                       ),
+                    ),
 
-                      const SizedBox(
-                          height: 30),
+                    const SizedBox(height: 30),
 
-                      Text(
-                        "Featured Products",
-                        style:
-                            AppTheme.heading,
+                    Text(
+                      "Men Picks",
+                      style:
+                          AppTheme.heading,
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    ...menProducts.map(
+                      (product) =>
+                          _productCard(
+                        context,
+                        product,
                       ),
+                    ),
 
-                      const SizedBox(
-                          height: 20),
+                    const SizedBox(height: 30),
 
-                      ...products.take(6).map(
-                            (product) =>
-                                _productCard(
-                              context,
-                              product,
-                            ),
-                          ),
+                    Text(
+                      "Women Picks",
+                      style:
+                          AppTheme.heading,
+                    ),
 
-                      const SizedBox(
-                          height: 30),
+                    const SizedBox(height: 20),
 
-                      Text(
-                        "Men Picks",
-                        style:
-                            AppTheme.heading,
+                    ...womenProducts.map(
+                      (product) =>
+                          _productCard(
+                        context,
+                        product,
                       ),
-
-                      const SizedBox(
-                          height: 20),
-
-                      ...menProducts.take(3).map(
-                            (product) =>
-                                _productCard(
-                              context,
-                              product,
-                            ),
-                          ),
-
-                      const SizedBox(
-                          height: 30),
-
-                      Text(
-                        "Women Picks",
-                        style:
-                            AppTheme.heading,
-                      ),
-
-                      const SizedBox(
-                          height: 20),
-
-                      ...womenProducts
-                          .take(3)
-                          .map(
-                            (product) =>
-                                _productCard(
-                              context,
-                              product,
-                            ),
-                          ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
     );
   }
@@ -258,13 +264,38 @@ class _HomeScreenState
       margin:
           const EdgeInsets.only(bottom: 16),
       child: ListTile(
-        leading: product.images.isNotEmpty
-            ? Image.network(
-                product.images.first,
-                width: 60,
-                fit: BoxFit.cover,
-              )
-            : const Icon(Icons.image),
+        leading:
+            product.images.isNotEmpty
+                ? CachedNetworkImage(
+                    imageUrl:
+                        optimizeImage(
+                      product.images.first,
+                    ),
+                    width: 60,
+                    fit: BoxFit.cover,
+                    placeholder:
+                        (context, url) =>
+                            const SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: Center(
+                        child:
+                            CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    ),
+                    errorWidget:
+                        (
+                          context,
+                          url,
+                          error,
+                        ) =>
+                            const Icon(
+                      Icons.broken_image,
+                    ),
+                  )
+                : const Icon(Icons.image),
         title: Text(product.name),
         subtitle:
             Text("₹${product.price}"),

@@ -18,7 +18,6 @@ import 'controllers/admin_controller.dart';
 import 'controllers/admin_order_controller.dart';
 import 'controllers/review_controller.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -38,13 +37,13 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) =>
-              AuthController(),
+          create: (_) => AuthController(),
         ),
 
         ChangeNotifierProvider(
           create: (_) =>
-              ProductController(),
+              ProductController()
+                ..loadFromCacheOnly(),
         ),
 
         ChangeNotifierProvider(
@@ -54,13 +53,12 @@ void main() async {
         ),
 
         ChangeNotifierProvider(
-          create: (_) =>
-              OrderController(),
+          create: (_) => OrderController(),
+
         ),
 
         ChangeNotifierProvider(
-          create: (_) =>
-              AdminController(),
+          create: (_) => AdminController(),
         ),
 
         ChangeNotifierProvider(
@@ -69,11 +67,9 @@ void main() async {
         ),
 
         ChangeNotifierProvider(
-          create: (_) =>
-              ReviewController(),
+          create: (_) => ReviewController(),
         ),
       ],
-
       child: const MyApp(),
     ),
   );
@@ -83,23 +79,40 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return MaterialApp(
       title: "ClothX",
       debugShowCheckedModeBanner: false,
-
       theme: AppTheme.lightTheme,
 
-home: Consumer<AuthController>(
-  builder: (context, auth, _) {
-    if (auth.currentUser == null) {
-      return const AuthScreen();
-    }
+      home: Consumer<AuthController>(
+        builder: (
+          context,
+          auth,
+          _,
+        ) {
+          // Loading auth state
+          if (auth.isLoading &&
+              auth.currentUser == null) {
+            return const Scaffold(
+              body: Center(
+                child:
+                    CircularProgressIndicator(),
+              ),
+            );
+          }
 
-    return const BottomNavScreen();
-  },
-),
+          // Not logged in
+          if (auth.currentUser == null) {
+            return const AuthScreen();
+          }
+
+          // Logged in
+          return const BottomNavScreen();
+        },
+      ),
     );
   }
 }
-

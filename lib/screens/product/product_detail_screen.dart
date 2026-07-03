@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clothx/controllers/cart_controller.dart';
 import 'package:clothx/controllers/review_controller.dart';
 import 'package:clothx/core/theme/app_theme.dart';
@@ -5,7 +6,6 @@ import 'package:clothx/models/cart_model.dart';
 import 'package:clothx/models/product_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 
 class ProductDetailScreen extends StatefulWidget {
   final ProductModel product;
@@ -25,6 +25,24 @@ class _ProductDetailScreenState
   String selectedSize = "";
   int quantity = 1;
 
+  String optimizeProductImage(
+    String url,
+  ) {
+    return url.replaceFirst(
+      "/upload/",
+      "/upload/f_auto,q_auto,w_800/",
+    );
+  }
+
+  String optimizeReviewImage(
+    String url,
+  ) {
+    return url.replaceFirst(
+      "/upload/",
+      "/upload/f_auto,q_auto,w_300/",
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -35,7 +53,9 @@ class _ProductDetailScreenState
     Future.microtask(() async {
       await context
           .read<ReviewController>()
-          .fetchReviews(widget.product.id);
+          .fetchReviews(
+            widget.product.id,
+          );
     });
   }
 
@@ -49,7 +69,6 @@ class _ProductDetailScreenState
       appBar: AppBar(
         title: Text(product.name),
       ),
-
       body: SingleChildScrollView(
         padding:
             const EdgeInsets.all(16),
@@ -57,7 +76,6 @@ class _ProductDetailScreenState
           crossAxisAlignment:
               CrossAxisAlignment.start,
           children: [
-            // Images slider
             SizedBox(
               height: 320,
               child: PageView.builder(
@@ -70,9 +88,31 @@ class _ProductDetailScreenState
                         BorderRadius.circular(
                       20,
                     ),
-                    child: Image.network(
-                      product.images[index],
+                    child:
+                        CachedNetworkImage(
+                      imageUrl:
+                          optimizeProductImage(
+                        product.images[index],
+                      ),
                       fit: BoxFit.cover,
+                      placeholder:
+                          (
+                            context,
+                            url,
+                          ) =>
+                              const Center(
+                        child:
+                            CircularProgressIndicator(),
+                      ),
+                      errorWidget:
+                          (
+                            context,
+                            url,
+                            error,
+                          ) =>
+                              const Icon(
+                        Icons.broken_image,
+                      ),
                     ),
                   );
                 },
@@ -151,9 +191,7 @@ class _ProductDetailScreenState
                   icon:
                       const Icon(Icons.remove),
                 ),
-
                 Text(quantity.toString()),
-
                 IconButton(
                   onPressed: () {
                     if (quantity <
@@ -280,21 +318,45 @@ class _ProductDetailScreenState
                                 r.images
                                     .length,
                             itemBuilder:
-                                (context,
-                                    index) {
+                                (
+                                  context,
+                                  index,
+                                ) {
                               return Padding(
                                 padding:
                                     const EdgeInsets.all(
                                   8,
                                 ),
                                 child:
-                                    Image.network(
-                                  r.images[
-                                      index],
+                                    CachedNetworkImage(
+                                  imageUrl:
+                                      optimizeReviewImage(
+                                    r.images[index],
+                                  ),
                                   width:
                                       100,
-                                  fit: BoxFit
-                                      .cover,
+                                  fit: BoxFit.cover,
+                                  placeholder:
+                                      (
+                                        context,
+                                        url,
+                                      ) =>
+                                          const SizedBox(
+                                    width: 100,
+                                    child: Center(
+                                      child:
+                                          CircularProgressIndicator(),
+                                    ),
+                                  ),
+                                  errorWidget:
+                                      (
+                                        context,
+                                        url,
+                                        error,
+                                      ) =>
+                                          const Icon(
+                                    Icons.broken_image,
+                                  ),
                                 ),
                               );
                             },

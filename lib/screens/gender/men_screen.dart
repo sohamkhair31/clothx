@@ -1,11 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clothx/controllers/product_controller.dart';
 import 'package:clothx/core/theme/app_theme.dart';
 import 'package:clothx/models/product_model.dart';
 import 'package:clothx/screens/product/product_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-
 
 class MenScreen extends StatefulWidget {
   const MenScreen({super.key});
@@ -25,6 +24,13 @@ class _MenScreenState extends State<MenScreen> {
     "shirts",
     "pants",
   ];
+
+  String optimizeImage(String url) {
+    return url.replaceFirst(
+      "/upload/",
+      "/upload/f_auto,q_auto,w_300/",
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +54,6 @@ class _MenScreenState extends State<MenScreen> {
       appBar: AppBar(
         title: const Text("Men Collection"),
       ),
-
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -115,8 +120,7 @@ class _MenScreenState extends State<MenScreen> {
                       itemBuilder:
                           (context, index) {
                         final product =
-                            menProducts[
-                                index];
+                            menProducts[index];
 
                         return Card(
                           margin:
@@ -127,30 +131,50 @@ class _MenScreenState extends State<MenScreen> {
                             leading:
                                 product.images
                                         .isNotEmpty
-                                    ? Image.network(
-                                        product.images
-                                            .first,
+                                    ? CachedNetworkImage(
+                                        imageUrl:
+                                            optimizeImage(
+                                          product.images.first,
+                                        ),
                                         width: 60,
-                                        fit: BoxFit
-                                            .cover,
+                                        fit: BoxFit.cover,
+                                        placeholder:
+                                            (
+                                              context,
+                                              url,
+                                            ) =>
+                                                const SizedBox(
+                                          width: 60,
+                                          height: 60,
+                                          child: Center(
+                                            child:
+                                                CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        ),
+                                        errorWidget:
+                                            (
+                                              context,
+                                              url,
+                                              error,
+                                            ) =>
+                                                const Icon(
+                                          Icons.broken_image,
+                                        ),
                                       )
                                     : const Icon(
                                         Icons.image,
                                       ),
-
                             title: Text(
                               product.name,
                             ),
-
                             subtitle: Text(
                               "₹${product.price}",
                             ),
-
-                            trailing:
-                                Text(
+                            trailing: Text(
                               "Stock: ${product.stock}",
                             ),
-
                             onTap: () {
                               Navigator.push(
                                 context,

@@ -28,19 +28,53 @@ class CartModel {
     };
   }
 
-  factory CartModel.fromMap(Map<String, dynamic> map) {
+  factory CartModel.fromMap(
+    Map<String, dynamic> map,
+  ) {
     return CartModel(
-      productId: map["productId"] ?? "",
+      productId:
+          map["productId"] ?? "",
       name: map["name"] ?? "",
       image: map["image"] ?? "",
-      price: (map["price"] ?? 0).toDouble(),
+      price:
+          (map["price"] ?? 0)
+              .toDouble(),
       size: map["size"] ?? "",
-      quantity: map["quantity"] ?? 1,
+      quantity:
+          map["quantity"] ?? 1,
     );
   }
 
-  String toJson() => jsonEncode(toMap());
+  // ================= COPY WITH =================
+  CartModel copyWith({
+    String? productId,
+    String? name,
+    String? image,
+    double? price,
+    String? size,
+    int? quantity,
+  }) {
+    return CartModel(
+      productId:
+          productId ?? this.productId,
+      name: name ?? this.name,
+      image: image ?? this.image,
+      price: price ?? this.price,
+      size: size ?? this.size,
+      quantity:
+          quantity ?? this.quantity,
+    );
+  }
 
-  factory CartModel.fromJson(String source) =>
-      CartModel.fromMap(jsonDecode(source));
+  // ================= JSON =================
+  String toJson() =>
+      jsonEncode(toMap());
+
+  factory CartModel.fromJson(
+    String source,
+  ) {
+    return CartModel.fromMap(
+      jsonDecode(source),
+    );
+  }
 }

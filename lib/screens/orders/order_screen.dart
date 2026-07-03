@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clothx/controllers/auth_controller.dart';
 import 'package:clothx/controllers/order_controller.dart';
 import 'package:clothx/core/theme/app_theme.dart';
@@ -27,19 +28,23 @@ class _OrdersScreenState
 
       final user = auth.currentUser;
 
-      // Stop if no user logged in
       if (user == null) return;
 
-      // Load cache first
       orderController.loadOrdersFromCache(
         user.uid,
       );
 
-      // Then fetch latest from server
       await orderController.fetchOrders(
         user.uid,
       );
     });
+  }
+
+  String optimizeImage(String url) {
+    return url.replaceFirst(
+      "/upload/",
+      "/upload/f_auto,q_auto,w_150/",
+    );
   }
 
   Color getStatusColor(String status) {
@@ -106,109 +111,174 @@ class _OrdersScreenState
                       final item =
                           order.orders[index];
 
-                     
-return Card(
-  margin: const EdgeInsets.all(12),
-  child: Padding(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Order ID",
-          style: AppTheme.subHeading,
-        ),
+                      return Card(
+                        margin:
+                            const EdgeInsets.all(
+                          12,
+                        ),
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.all(
+                            16,
+                          ),
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment
+                                    .start,
+                            children: [
+                              Text(
+                                "Order ID",
+                                style:
+                                    AppTheme.subHeading,
+                              ),
 
-        Text(item.orderId),
+                              Text(
+                                item.orderId,
+                              ),
 
-        const SizedBox(height: 10),
+                              const SizedBox(
+                                  height: 10),
 
-        Text(
-          "Total: ₹${item.totalAmount}",
-          style: AppTheme.body,
-        ),
+                              Text(
+                                "Total: ₹${item.totalAmount}",
+                                style:
+                                    AppTheme.body,
+                              ),
 
-        const SizedBox(height: 10),
+                              const SizedBox(
+                                  height: 10),
 
-        Container(
-          padding:
-              const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 6,
-          ),
-          decoration: BoxDecoration(
-            color: getStatusColor(
-              item.orderStatus,
-            ),
-            borderRadius:
-                BorderRadius.circular(20),
-          ),
-          child: Text(
-            item.orderStatus.toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
+                              Container(
+                                padding:
+                                    const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration:
+                                    BoxDecoration(
+                                  color:
+                                      getStatusColor(
+                                    item.orderStatus,
+                                  ),
+                                  borderRadius:
+                                      BorderRadius.circular(
+                                    20,
+                                  ),
+                                ),
+                                child: Text(
+                                  item.orderStatus
+                                      .toUpperCase(),
+                                  style:
+                                      const TextStyle(
+                                    color:
+                                        Colors.white,
+                                    fontWeight:
+                                        FontWeight.bold,
+                                  ),
+                                ),
+                              ),
 
-        const SizedBox(height: 15),
+                              const SizedBox(
+                                  height: 15),
 
-        Text(
-          "Products",
-          style: AppTheme.subHeading,
-        ),
+                              Text(
+                                "Products",
+                                style:
+                                    AppTheme.subHeading,
+                              ),
 
-        const SizedBox(height: 10),
+                              const SizedBox(
+                                  height: 10),
 
-        ...item.items.map((cartItem) {
-          return ListTile(
-            contentPadding:
-                EdgeInsets.zero,
-            leading: Image.network(
-              cartItem.image,
-              width: 50,
-              height: 50,
-              fit: BoxFit.cover,
-            ),
-            title: Text(
-              cartItem.name,
-            ),
-            subtitle: Text(
-              "Size: ${cartItem.size} | Qty: ${cartItem.quantity}",
-            ),
-            trailing: Text(
-              "₹${cartItem.price}",
-            ),
-          );
-        }),
+                              ...item.items.map(
+                                (cartItem) {
+                                  return ListTile(
+                                    contentPadding:
+                                        EdgeInsets.zero,
+                                    leading:
+                                        CachedNetworkImage(
+                                      imageUrl:
+                                          optimizeImage(
+                                        cartItem.image,
+                                      ),
+                                      width: 50,
+                                      height: 50,
+                                      fit:
+                                          BoxFit.cover,
+                                      placeholder:
+                                          (
+                                            context,
+                                            url,
+                                          ) =>
+                                              const SizedBox(
+                                        width: 50,
+                                        height: 50,
+                                        child:
+                                            Center(
+                                          child:
+                                              CircularProgressIndicator(
+                                            strokeWidth:
+                                                2,
+                                          ),
+                                        ),
+                                      ),
+                                      errorWidget:
+                                          (
+                                            context,
+                                            url,
+                                            error,
+                                          ) =>
+                                              const Icon(
+                                        Icons
+                                            .broken_image,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      cartItem.name,
+                                    ),
+                                    subtitle:
+                                        Text(
+                                      "Size: ${cartItem.size} | Qty: ${cartItem.quantity}",
+                                    ),
+                                    trailing:
+                                        Text(
+                                      "₹${cartItem.price}",
+                                    ),
+                                  );
+                                },
+                              ),
 
-        const SizedBox(height: 10),
+                              const SizedBox(
+                                  height: 10),
 
-        if (item.orderStatus
-                .toLowerCase() ==
-            "pending")
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () async {
-                await context
-                    .read<OrderController>()
-                    .cancelOrder(
-                      item.orderId,
-                    );
-              },
-              child: const Text(
-                "Cancel Order",
-              ),
-            ),
-          ),
-      ],
-    ),
-  ),
-);
-                        },
+                              if (item.orderStatus
+                                      .toLowerCase() ==
+                                  "pending")
+                                SizedBox(
+                                  width:
+                                      double.infinity,
+                                  child:
+                                      ElevatedButton(
+                                    onPressed:
+                                        () async {
+                                      await context
+                                          .read<
+                                              OrderController>()
+                                          .cancelOrder(
+                                            item.orderId,
+                                          );
+                                    },
+                                    child:
+                                        const Text(
+                                      "Cancel Order",
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
     );

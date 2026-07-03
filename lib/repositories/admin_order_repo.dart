@@ -6,11 +6,17 @@ class AdminOrderRepo {
   final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
 
-  // Get all orders
-  Future<List<OrderModel>> getAllOrders() async {
+  // ================= GET ALL ORDERS =================
+  Future<List<OrderModel>> getAllOrders({
+    int limit = 50,
+  }) async {
     final snapshot = await _firestore
         .collection("orders")
-        .orderBy("createdAt", descending: true)
+        .orderBy(
+          "createdAt",
+          descending: true,
+        )
+        .limit(limit)
         .get();
 
     return snapshot.docs.map((doc) {
@@ -20,7 +26,26 @@ class AdminOrderRepo {
     }).toList();
   }
 
-  // Update order status
+  // ================= GET META =================
+  Future<String> getOrdersMeta() async {
+    final doc = await _firestore
+        .collection("app_meta")
+        .doc("admin_orders")
+        .get();
+
+    if (!doc.exists) {
+      return "";
+    }
+
+    final timestamp =
+        doc["lastUpdated"] as Timestamp;
+
+    return timestamp
+        .toDate()
+        .toIso8601String();
+  }
+
+  // ================= UPDATE ORDER STATUS =================
   Future<void> updateOrderStatus({
     required String orderId,
     required String status,
@@ -31,15 +56,24 @@ class AdminOrderRepo {
         .update({
       "orderStatus": status,
     });
+
+    // update admin meta
+    await _firestore
+        .collection("app_meta")
+        .doc("admin_orders")
+        .set({
+      "lastUpdated":
+          FieldValue.serverTimestamp(),
+    });
   }
 
-  // Cancel order
-  Future<void> cancelOrder(String orderId) async {
-    await _firestore
-        .collection("orders")
-        .doc(orderId)
-        .update({
-      "orderStatus": "cancelled",
-    });
+  // ================= CANCEL ORDER =================
+  Future<void> cancelOrder(
+    String orderId,
+  ) async {
+    await updateOrderStatus(
+      orderId: orderId,
+      status: "cancelled",
+    );
   }
 }

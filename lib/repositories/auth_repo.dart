@@ -25,13 +25,17 @@ class AuthRepo {
       password: password,
     );
 
+    final now = DateTime.now();
+
     final user = UserModel(
       uid: credential.user!.uid,
-      name: name,
-      email: email,
-      phone: phone,
-      address: address,
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      address: address.trim(),
       role: "user",
+      createdAt: now,
+      updatedAt: now,
     );
 
     await _firestore
@@ -47,12 +51,12 @@ class AuthRepo {
   }) async {
     return await _auth
         .signInWithEmailAndPassword(
-      email: email,
+      email: email.trim(),
       password: password,
     );
   }
 
-  // ================= USER DATA =================
+  // ================= GET USER DATA =================
   Future<UserModel?> getUserData(
     String uid,
   ) async {
@@ -60,47 +64,66 @@ class AuthRepo {
         await _firestore
             .collection("users")
             .doc(uid)
-            .get();
+            .get(
+              const GetOptions(
+                source: Source.serverAndCache,
+              ),
+            );
 
-    if (!doc.exists) return null;
+    if (!doc.exists) {
+      return null;
+    }
 
     return UserModel.fromMap(
       doc.data()!,
     );
   }
 
-  // ================= ADMIN CHECK =================
+  // ================= CHECK ADMIN =================
   Future<bool> isAdmin(
     String uid,
   ) async {
-    final user =
-        await getUserData(uid);
+    final doc =
+        await _firestore
+            .collection("users")
+            .doc(uid)
+            .get(
+              const GetOptions(
+                source: Source.serverAndCache,
+              ),
+            );
 
-    if (user == null) {
+    if (!doc.exists) {
       return false;
     }
 
-    return user.role == "admin";
+    final role =
+        doc.data()?["role"] ?? "user";
+
+    return role == "admin";
+  }
+
+  // ================= UPDATE USER =================
+  Future<void> updateUser({
+    required String uid,
+    required String name,
+    required String phone,
+    required String address,
+  }) async {
+    await _firestore
+        .collection("users")
+        .doc(uid)
+        .update({
+      "name": name.trim(),
+      "phone": phone.trim(),
+      "address": address.trim(),
+      "updatedAt":
+          FieldValue.serverTimestamp(),
+    });
   }
 
   // ================= LOGOUT =================
   Future<void> logout() async {
     await _auth.signOut();
   }
-
-  Future<void> updateUser({
-  required String uid,
-  required String name,
-  required String phone,
-  required String address,
-}) async {
-  await _firestore
-      .collection("users")
-      .doc(uid)
-      .update({
-    "name": name,
-    "phone": phone,
-    "address": address,
-  });
-}
 }
