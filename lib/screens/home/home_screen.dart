@@ -1,10 +1,6 @@
-<<<<<<< HEAD
 import 'dart:async';
 import 'dart:ui';
 
-=======
-import 'package:cached_network_image/cached_network_image.dart';
->>>>>>> b0ced26b39c53e966cea1a49ca07b5396d35de3e
 import 'package:clothx/controllers/product_controller.dart';
 import 'package:clothx/models/product_model.dart';
 import 'package:clothx/screens/cart/cart_screen.dart';
@@ -108,13 +104,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  String optimizeImage(String url) {
-    return url.replaceFirst(
-      "/upload/",
-      "/upload/f_auto,q_auto,w_300/",
-    );
-  }
-
   @override
   void dispose() {
     _scrollController.dispose();
@@ -126,34 +115,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final productController = context.watch<ProductController>();
     final products = productController.products;
 
-<<<<<<< HEAD
     final menProducts = products.where((p) => p.gender == "men").toList();
     final womenProducts = products.where((p) => p.gender == "women").toList();
     final bestSellers = products.take(8).toList();
 
     final width = MediaQuery.of(context).size.width;
-=======
-    final featured =
-        products.take(6).toList();
-
-    final menProducts = products
-        .where(
-          (p) =>
-              p.gender == "men" &&
-              !featured.contains(p),
-        )
-        .take(3)
-        .toList();
-
-    final womenProducts = products
-        .where(
-          (p) =>
-              p.gender == "women" &&
-              !featured.contains(p),
-        )
-        .take(3)
-        .toList();
->>>>>>> b0ced26b39c53e966cea1a49ca07b5396d35de3e
 
     return Scaffold(
       backgroundColor: NVColors.ivoryWhite,
@@ -555,154 +521,6 @@ class _NVLogo extends StatelessWidget {
           ),
         ],
       ),
-<<<<<<< HEAD
-=======
-      body: productController.isLoading &&
-              products.isEmpty
-          ? const Center(
-              child:
-                  CircularProgressIndicator(),
-            )
-          : products.isEmpty
-              ? const Center(
-                  child:
-                      Text("No products found"),
-                )
-              : ListView(
-                  padding:
-                      const EdgeInsets.all(16),
-                  children: [
-                    Container(
-                      height: 180,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color:
-                            AppTheme.primary,
-                        borderRadius:
-                            BorderRadius.circular(
-                          20,
-                        ),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          "NEW COLLECTION 2026",
-                          style: TextStyle(
-                            color:
-                                Colors.white,
-                            fontSize: 24,
-                            fontWeight:
-                                FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    Text(
-                      "Shop By Category",
-                      style:
-                          AppTheme.heading,
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child:
-                              _categoryCard(
-                            context,
-                            "Men",
-                            () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const MenScreen(),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-
-                        const SizedBox(width: 16),
-
-                        Expanded(
-                          child:
-                              _categoryCard(
-                            context,
-                            "Women",
-                            () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const WomenScreen(),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    Text(
-                      "Featured Products",
-                      style:
-                          AppTheme.heading,
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    ...featured.map(
-                      (product) =>
-                          _productCard(
-                        context,
-                        product,
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    Text(
-                      "Men Picks",
-                      style:
-                          AppTheme.heading,
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    ...menProducts.map(
-                      (product) =>
-                          _productCard(
-                        context,
-                        product,
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    Text(
-                      "Women Picks",
-                      style:
-                          AppTheme.heading,
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    ...womenProducts.map(
-                      (product) =>
-                          _productCard(
-                        context,
-                        product,
-                      ),
-                    ),
-                  ],
-                ),
->>>>>>> b0ced26b39c53e966cea1a49ca07b5396d35de3e
     );
   }
 }
@@ -779,7 +597,6 @@ class _NavLinkState extends State<_NavLink> {
   }
 }
 
-<<<<<<< HEAD
 class _NavIcon extends StatefulWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -809,62 +626,6 @@ class _NavIconState extends State<_NavIcon> {
           widget.icon,
           color: _hovered ? NVColors.ivoryWhite : NVColors.champagneGold,
         ),
-=======
-  Widget _productCard(
-    BuildContext context,
-    ProductModel product,
-  ) {
-    return Card(
-      margin:
-          const EdgeInsets.only(bottom: 16),
-      child: ListTile(
-        leading:
-            product.images.isNotEmpty
-                ? CachedNetworkImage(
-                    imageUrl:
-                        optimizeImage(
-                      product.images.first,
-                    ),
-                    width: 60,
-                    fit: BoxFit.cover,
-                    placeholder:
-                        (context, url) =>
-                            const SizedBox(
-                      width: 60,
-                      height: 60,
-                      child: Center(
-                        child:
-                            CircularProgressIndicator(
-                          strokeWidth: 2,
-                        ),
-                      ),
-                    ),
-                    errorWidget:
-                        (
-                          context,
-                          url,
-                          error,
-                        ) =>
-                            const Icon(
-                      Icons.broken_image,
-                    ),
-                  )
-                : const Icon(Icons.image),
-        title: Text(product.name),
-        subtitle:
-            Text("₹${product.price}"),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  ProductDetailScreen(
-                product: product,
-              ),
-            ),
-          );
-        },
->>>>>>> b0ced26b39c53e966cea1a49ca07b5396d35de3e
       ),
     );
   }

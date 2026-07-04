@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:clothx/controllers/product_controller.dart';
 import 'package:clothx/models/product_model.dart';
 // Reusing the exact same design system (colors + breakpoints) as the
@@ -8,8 +10,6 @@ import 'package:clothx/screens/home/home_screen.dart' show NVColors, NVBreak;
 import 'package:clothx/screens/product/product_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-
 
 class WomenScreen extends StatefulWidget {
   const WomenScreen({super.key});
@@ -29,6 +29,60 @@ class _WomenScreenState extends State<WomenScreen> {
     "shirts",
     "pants",
   ];
+
+  // ------------------------------------------------------------------
+  // ADDED: these were referenced by the header (searchOpen,
+  // searchController, _searchQuery, onBack/onFilterTap/onToggleSearch/
+  // onSearchChanged) but never declared anywhere in the pasted file.
+  // Purely local, presentation-only UI state — same pattern as the
+  // Orders screen's search box. Never touches the controller/API.
+  // ------------------------------------------------------------------
+  bool searchOpen = false;
+  final TextEditingController searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  // ---- ADDED: presentation-only display label/icon per category key.
+  // Referenced by _ProductsSection / _SeasonalEditShowcase but not
+  // defined anywhere in the pasted file. Doesn't alter filtering logic.
+  String _categoryLabel(String c) {
+    switch (c) {
+      case "all":
+        return "All";
+      case "hoodies":
+        return "Hoodies";
+      case "tshirts":
+        return "T-Shirts";
+      case "shirts":
+        return "Shirts";
+      case "pants":
+        return "Pants";
+      default:
+        return c.isEmpty ? c : c[0].toUpperCase() + c.substring(1);
+    }
+  }
+
+  IconData _categoryIcon(String c) {
+    switch (c) {
+      case "all":
+        return Icons.grid_view_rounded;
+      case "hoodies":
+        return Icons.checkroom_rounded;
+      case "tshirts":
+        return Icons.dry_cleaning_rounded;
+      case "shirts":
+        return Icons.checkroom_rounded;
+      case "pants":
+        return Icons.accessibility_new_rounded;
+      default:
+        return Icons.category_rounded;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,16 +113,117 @@ class _WomenScreenState extends State<WomenScreen> {
     final desktop = NVBreak.isDesktop(width);
     final cols = NVBreak.gridColumns(width);
 
+    // ------------------------------------------------------------------
+    // ADDED: build() previously only ever returned the header — the
+    // Hero banner, Seasonal Edit, Editor's Picks and Products sections
+    // below were fully built but never called from anywhere. Wiring
+    // them in here so the screen actually renders as designed.
+    // ------------------------------------------------------------------
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          "Women Collection",
+      backgroundColor: NVColors.ivoryWhite,
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            _WomenHeaderBar(
+              width: width,
+              desktop: desktop,
+              searchOpen: searchOpen,
+              searchController: searchController,
+              onBack: () => Navigator.maybePop(context),
+              onFilterTap: () {},
+              onToggleSearch: () => setState(() => searchOpen = !searchOpen),
+              onSearchChanged: (v) => setState(() => _searchQuery = v),
+            ),
+            _HeroBanner(
+              width: width,
+              onExplore: () {},
+            ),
+            _SeasonalEditShowcase(
+              width: width,
+              categories: categories,
+              selected: selectedCategory,
+              labelBuilder: _categoryLabel,
+              onSelect: (c) => setState(() => selectedCategory = c),
+            ),
+            _EditorsPicks(width: width),
+            _ProductsSection(
+              width: width,
+              cols: cols,
+              isLoading: isLoading,
+              products: visibleProducts,
+              categories: categories,
+              selectedCategory: selectedCategory,
+              labelBuilder: _categoryLabel,
+              iconBuilder: _categoryIcon,
+              onCategorySelect: (c) => setState(() => selectedCategory = c),
+              onOpenProduct: (product) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ProductDetailScreen(product: product),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 40),
+          ],
         ),
       ),
+    );
+  }
+}
 
-      body: Padding(
-        padding:
-            const EdgeInsets.all(16),
+/// ============================================================
+/// HEADER — rich-black bar with back button, title/subtitle, filter
+/// and search toggle, and an expandable glass search field. Mirrors
+/// the header language on the Orders and Men's Collection screens.
+///
+/// ADDED: this was the exact Row/AnimatedSize block that used to sit
+/// directly (and only) inside _WomenScreenState.build(), wrapped in a
+/// plain AppBar Scaffold. That left ivoryWhite/white54 text sitting on
+/// a plain white AppBar (unreadable) and callbacks/fields it never
+/// declared. Pulled out into its own widget, wrapped in the same
+/// rich-black rounded container the Orders/Men's headers use, and
+/// wired to real state from the parent. The Row/AnimatedSize content
+/// itself is unchanged from what was pasted.
+/// ============================================================
+class _WomenHeaderBar extends StatelessWidget {
+  final double width;
+  final bool desktop;
+  final bool searchOpen;
+  final TextEditingController searchController;
+  final VoidCallback onBack;
+  final VoidCallback onFilterTap;
+  final VoidCallback onToggleSearch;
+  final ValueChanged<String> onSearchChanged;
+
+  const _WomenHeaderBar({
+    required this.width,
+    required this.desktop,
+    required this.searchOpen,
+    required this.searchController,
+    required this.onBack,
+    required this.onFilterTap,
+    required this.onToggleSearch,
+    required this.onSearchChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hPad = NVBreak.hPad(width);
+    return _FadeSlideIn(
+      child: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          color: NVColors.richBlack,
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(28),
+            bottomRight: Radius.circular(28),
+          ),
+        ),
+        padding: EdgeInsets.fromLTRB(hPad, 14, hPad, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -724,6 +879,16 @@ class _CategoryPill extends StatelessWidget {
   }
 }
 
+/// ADDED / REPAIRED: the pasted version of this widget's build()
+/// method was corrupted mid-way — a stray `Text("No products found")`
+/// and an unrelated `ListView.builder`/`Card`/`ListTile` block (from
+/// an older, simpler product-list screen) were spliced into the
+/// middle of the stock-badge `Container`, with a dangling `:` that
+/// didn't belong to any `?`, and the card never had a name/price
+/// footer at all. The image + low-stock/out-of-stock badge logic
+/// below is exactly what was pasted; the favorite toggle and the
+/// name/price footer are new, needed for this to be a usable product
+/// card (the `_favorite` field existed but was never used anywhere).
 class _LuxuryProductCard extends StatefulWidget {
   final ProductModel product;
   final VoidCallback onTap;
@@ -793,69 +958,169 @@ class _LuxuryProductCardState extends State<_LuxuryProductCard> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            "No products found",
+                            outOfStock ? "SOLD OUT" : "LOW STOCK",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
                           ),
-                        )
-                      : ListView.builder(
-                          itemCount:
-                              womenProducts.length,
-                          itemBuilder:
-                              (context,
-                                  index) {
-                            final product =
-                                womenProducts[
-                                    index];
-
-                            return Card(
-                              margin:
-                                  const EdgeInsets.only(
-                                bottom: 16,
-                              ),
-                              child:
-                                  ListTile(
-                                leading:
-                                    product.images
-                                            .isNotEmpty
-                                        ? Image.network(
-                                            product.images.first,
-                                            width: 60,
-                                            fit: BoxFit.cover,
-                                          )
-                                        : const Icon(
-                                            Icons.image,
-                                          ),
-
-                                title: Text(
-                                  product.name,
-                                ),
-
-                                subtitle:
-                                    Text(
-                                  "₹${product.price}",
-                                ),
-
-                                trailing:
-                                    Text(
-                                  "Stock: ${product.stock}",
-                                ),
-
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (_) =>
-                                              ProductDetailScreen(
-                                        product:
-                                            product,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            );
-                          },
                         ),
+                      ),
+                    // ADDED: favorite toggle — wires up the previously
+                    // unused `_favorite` field.
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: GestureDetector(
+                        onTap: () => setState(() => _favorite = !_favorite),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.85),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            _favorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                            size: 16,
+                            color: _favorite ? const Color(0xFFA24C42) : NVColors.graphite,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // ADDED: name/price footer — missing entirely from the
+              // pasted file, but required for the card to be usable.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: NVColors.richBlack,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      outOfStock ? "Out of stock" : "₹${product.price}",
+                      style: TextStyle(
+                        color: outOfStock ? NVColors.warmGray : NVColors.richBlack,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// ADDED: referenced by _ProductsSection but never defined anywhere
+/// in the pasted file. Matches the shimmer style used on the Orders
+/// screen.
+class _ProductGridShimmer extends StatelessWidget {
+  final int cols;
+  const _ProductGridShimmer({required this.cols});
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: cols * 2,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: cols,
+        mainAxisSpacing: 20,
+        crossAxisSpacing: 20,
+        childAspectRatio: 0.6,
+      ),
+      itemBuilder: (context, i) => const _ShimmerProductCard(),
+    );
+  }
+}
+
+class _ShimmerProductCard extends StatefulWidget {
+  const _ShimmerProductCard();
+
+  @override
+  State<_ShimmerProductCard> createState() => _ShimmerProductCardState();
+}
+
+class _ShimmerProductCardState extends State<_ShimmerProductCard> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))
+      ..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final t = _controller.value;
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment(-1 + t * 3, 0),
+              end: Alignment(0 + t * 3, 0),
+              colors: const [
+                Color(0xFFEDE7DC),
+                Color(0xFFF7F3EC),
+                Color(0xFFEDE7DC),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// ADDED: referenced by _ProductsSection but never defined anywhere
+/// in the pasted file. The "No products found" copy is the same line
+/// that was stranded in the middle of _LuxuryProductCard's corrupted
+/// build() — this is almost certainly where it originally belonged.
+class _EmptyProductsState extends StatelessWidget {
+  const _EmptyProductsState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 60),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.search_off_rounded, size: 40, color: NVColors.warmGray),
+            const SizedBox(height: 14),
+            const Text(
+              "No products found",
+              style: TextStyle(color: NVColors.graphite, fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -973,4 +1238,29 @@ class _FadeSlideInState extends State<_FadeSlideIn> with SingleTickerProviderSta
       child: SlideTransition(position: _slide, child: widget.child),
     );
   }
+}
+
+/// ADDED: referenced by _HeroBanner / _SeasonalEditShowcase /
+/// _EditorsPicks (`_WomenImages.hero`, `.categoryBanners`,
+/// `.editorsPicks`) but never defined anywhere in the pasted file.
+/// These are placeholder stock-photo URLs only — swap them for your
+/// own hosted product/editorial imagery.
+class _WomenImages {
+  static const String hero =
+      'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&q=80';
+
+  static const Map<String, String> categoryBanners = {
+    'all': 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&q=80',
+    'hoodies': 'https://images.unsplash.com/photo-1509551388413-e18d0ac5d495?w=600&q=80',
+    'tshirts': 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80',
+    'shirts': 'https://images.unsplash.com/photo-1551803091-e20673f15770?w=600&q=80',
+    'pants': 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=600&q=80',
+  };
+
+  static const List<(String, String)> editorsPicks = [
+    ('Tailored Blazer', 'https://images.unsplash.com/photo-1591369822096-ffd140ec948f?w=500&q=80'),
+    ('Silk Slip Dress', 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=500&q=80'),
+    ('Wide-Leg Trousers', 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500&q=80'),
+    ('Cashmere Knit', 'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=500&q=80'),
+  ];
 }

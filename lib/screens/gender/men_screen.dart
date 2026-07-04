@@ -1,9 +1,5 @@
-<<<<<<< HEAD
 import 'dart:ui';
 
-=======
-import 'package:cached_network_image/cached_network_image.dart';
->>>>>>> b0ced26b39c53e966cea1a49ca07b5396d35de3e
 import 'package:clothx/controllers/product_controller.dart';
 import 'package:clothx/models/product_model.dart';
 // Reusing the exact same design system (colors + breakpoints) as the
@@ -14,7 +10,6 @@ import 'package:clothx/screens/product/product_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-<<<<<<< HEAD
 /// Decorative editorial placeholder photography for this screen only.
 /// Swap for real campaign assets before shipping — none of these feed
 /// into business logic, they are purely cosmetic image sources.
@@ -45,8 +40,6 @@ class _MenImages {
   ];
 }
 
-=======
->>>>>>> b0ced26b39c53e966cea1a49ca07b5396d35de3e
 class MenScreen extends StatefulWidget {
   const MenScreen({super.key});
 
@@ -66,7 +59,6 @@ class _MenScreenState extends State<MenScreen> {
     "pants",
   ];
 
-<<<<<<< HEAD
   // ------------------------------------------------------------------
   // Everything below is PURELY local, presentation-only UI state. It
   // only narrows/reveals what's already been fetched & filtered above;
@@ -138,12 +130,6 @@ class _MenScreenState extends State<MenScreen> {
           Navigator.pop(context);
         },
       ),
-=======
-  String optimizeImage(String url) {
-    return url.replaceFirst(
-      "/upload/",
-      "/upload/f_auto,q_auto,w_300/",
->>>>>>> b0ced26b39c53e966cea1a49ca07b5396d35de3e
     );
   }
 
@@ -177,7 +163,6 @@ class _MenScreenState extends State<MenScreen> {
     final cols = NVBreak.gridColumns(width);
 
     return Scaffold(
-<<<<<<< HEAD
       backgroundColor: NVColors.ivoryWhite,
       body: CustomScrollView(
         slivers: [
@@ -190,20 +175,6 @@ class _MenScreenState extends State<MenScreen> {
               onToggleSearch: () => setState(() => _searchOpen = !_searchOpen),
               onSearchChanged: (v) => setState(() => _searchQuery = v),
               onFilterTap: _openFilterSheet,
-=======
-      appBar: AppBar(
-        title: const Text("Men Collection"),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Categories",
-              style: AppTheme.heading,
->>>>>>> b0ced26b39c53e966cea1a49ca07b5396d35de3e
             ),
           ),
           SliverToBoxAdapter(
@@ -355,88 +326,7 @@ class _MenHeader extends StatelessWidget {
                         ),
                       ),
                     )
-<<<<<<< HEAD
                   : const SizedBox.shrink(),
-=======
-                  : ListView.builder(
-                      itemCount:
-                          menProducts.length,
-                      itemBuilder:
-                          (context, index) {
-                        final product =
-                            menProducts[index];
-
-                        return Card(
-                          margin:
-                              const EdgeInsets.only(
-                            bottom: 16,
-                          ),
-                          child: ListTile(
-                            leading:
-                                product.images
-                                        .isNotEmpty
-                                    ? CachedNetworkImage(
-                                        imageUrl:
-                                            optimizeImage(
-                                          product.images.first,
-                                        ),
-                                        width: 60,
-                                        fit: BoxFit.cover,
-                                        placeholder:
-                                            (
-                                              context,
-                                              url,
-                                            ) =>
-                                                const SizedBox(
-                                          width: 60,
-                                          height: 60,
-                                          child: Center(
-                                            child:
-                                                CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          ),
-                                        ),
-                                        errorWidget:
-                                            (
-                                              context,
-                                              url,
-                                              error,
-                                            ) =>
-                                                const Icon(
-                                          Icons.broken_image,
-                                        ),
-                                      )
-                                    : const Icon(
-                                        Icons.image,
-                                      ),
-                            title: Text(
-                              product.name,
-                            ),
-                            subtitle: Text(
-                              "₹${product.price}",
-                            ),
-                            trailing: Text(
-                              "Stock: ${product.stock}",
-                            ),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (_) =>
-                                          ProductDetailScreen(
-                                    product:
-                                        product,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    ),
->>>>>>> b0ced26b39c53e966cea1a49ca07b5396d35de3e
             ),
           ],
         ),
