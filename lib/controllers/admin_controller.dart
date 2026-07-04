@@ -9,10 +9,8 @@ import '../core/services/cache/cache_service.dart';
 
 class AdminController extends ChangeNotifier {
   final AdminRepo _adminRepo = AdminRepo();
-
   final CloudinaryService _cloudinaryService =
       CloudinaryService();
-
   final CacheService _cacheService =
       CacheService();
 
@@ -21,7 +19,6 @@ class AdminController extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
-  // ================= COUNTS =================
   int get totalProducts =>
       adminProducts.length;
 
@@ -35,10 +32,13 @@ class AdminController extends ChangeNotifier {
           .where((p) => !p.isActive)
           .length;
 
-  // ================= LOAD CACHE FIRST =================
+  // ================= CACHE LOAD =================
   void loadAdminProductsFromCache() {
     final cachedProducts =
-        _cacheService.getProducts();
+        _cacheService.productBox.get(
+      "admin_products",
+      defaultValue: [],
+    );
 
     if (cachedProducts.isNotEmpty) {
       adminProducts =
@@ -59,14 +59,32 @@ class AdminController extends ChangeNotifier {
       errorMessage = null;
       notifyListeners();
 
+      final localMeta =
+          _cacheService.productBox.get(
+        "admin_products_meta",
+      );
+
+      final serverMeta =
+          await _adminRepo.getAdminProductsMeta();
+
+      if (localMeta == serverMeta) {
+        print(
+          "Admin products unchanged. Using cache.",
+        );
+
+        isLoading = false;
+        notifyListeners();
+        return;
+      }
+
       adminProducts =
           await _adminRepo.getAllProducts();
 
-      // Save cache
-      await _cacheService.saveProducts(
-        adminProducts
-            .map((e) => e.toMap())
-            .toList(),
+      await _saveAdminCache();
+
+      await _cacheService.productBox.put(
+        "admin_products_meta",
+        serverMeta,
       );
 
       isLoading = false;
@@ -95,17 +113,6 @@ class AdminController extends ChangeNotifier {
       errorMessage = null;
       notifyListeners();
 
-      if (name.trim().isEmpty ||
-          description.trim().isEmpty ||
-          price <= 0 ||
-          stock < 0 ||
-          imageFiles.isEmpty ||
-          sizes.isEmpty) {
-        throw Exception(
-          "Invalid product data",
-        );
-      }
-
       List<String> imageUrls = [];
 
       for (var image in imageFiles) {
@@ -116,7 +123,9 @@ class AdminController extends ChangeNotifier {
             await FlutterImageCompress.compressWithList(
           originalBytes,
           format: CompressFormat.webp,
-          quality: 75,
+          quality: 65,
+          minWidth: 1200,
+          minHeight: 1200,
         );
 
         final uploadedUrl =
@@ -132,22 +141,12 @@ class AdminController extends ChangeNotifier {
         }
       }
 
-      if (imageUrls.length !=
-          imageFiles.length) {
-        throw Exception(
-          "Some images failed to upload",
-        );
-      }
-
       final now = DateTime.now();
 
       final product = ProductModel(
-        id: now
-            .millisecondsSinceEpoch
-            .toString(),
+        id: now.millisecondsSinceEpoch.toString(),
         name: name.trim(),
-        description:
-            description.trim(),
+        description: description.trim(),
         price: price,
         images: imageUrls,
         sizes: sizes,
@@ -159,18 +158,11 @@ class AdminController extends ChangeNotifier {
         updatedAt: now,
       );
 
-      await _adminRepo.addProduct(
-        product,
-      );
+      await _adminRepo.addProduct(product);
 
       adminProducts.insert(0, product);
 
-      // Update cache
-      await _cacheService.saveProducts(
-        adminProducts
-            .map((e) => e.toMap())
-            .toList(),
-      );
+      await _saveAdminCache();
 
       isLoading = false;
       notifyListeners();
@@ -191,10 +183,6 @@ class AdminController extends ChangeNotifier {
     ProductModel product,
   ) async {
     try {
-      isLoading = true;
-      errorMessage = null;
-      notifyListeners();
-
       final updatedProduct =
           product.copyWith(
         updatedAt: DateTime.now(),
@@ -214,20 +202,14 @@ class AdminController extends ChangeNotifier {
             updatedProduct;
       }
 
-      await _cacheService.saveProducts(
-        adminProducts
-            .map((e) => e.toMap())
-            .toList(),
-      );
+      await _saveAdminCache();
 
-      isLoading = false;
       notifyListeners();
 
       return true;
     } catch (e) {
       errorMessage = e.toString();
 
-      isLoading = false;
       notifyListeners();
 
       return false;
@@ -239,10 +221,6 @@ class AdminController extends ChangeNotifier {
     String productId,
   ) async {
     try {
-      isLoading = true;
-      errorMessage = null;
-      notifyListeners();
-
       await _adminRepo.deleteProduct(
         productId,
       );
@@ -251,20 +229,14 @@ class AdminController extends ChangeNotifier {
         (p) => p.id == productId,
       );
 
-      await _cacheService.saveProducts(
-        adminProducts
-            .map((e) => e.toMap())
-            .toList(),
-      );
+      await _saveAdminCache();
 
-      isLoading = false;
       notifyListeners();
 
       return true;
     } catch (e) {
       errorMessage = e.toString();
 
-      isLoading = false;
       notifyListeners();
 
       return false;
@@ -277,10 +249,6 @@ class AdminController extends ChangeNotifier {
     required int newStock,
   }) async {
     try {
-      isLoading = true;
-      errorMessage = null;
-      notifyListeners();
-
       await _adminRepo.updateStock(
         productId: productId,
         newStock: newStock,
@@ -299,20 +267,14 @@ class AdminController extends ChangeNotifier {
         );
       }
 
-      await _cacheService.saveProducts(
-        adminProducts
-            .map((e) => e.toMap())
-            .toList(),
-      );
+      await _saveAdminCache();
 
-      isLoading = false;
       notifyListeners();
 
       return true;
     } catch (e) {
       errorMessage = e.toString();
 
-      isLoading = false;
       notifyListeners();
 
       return false;
@@ -325,10 +287,6 @@ class AdminController extends ChangeNotifier {
     required bool isActive,
   }) async {
     try {
-      isLoading = true;
-      errorMessage = null;
-      notifyListeners();
-
       await _adminRepo.toggleProductStatus(
         productId: productId,
         isActive: isActive,
@@ -347,38 +305,40 @@ class AdminController extends ChangeNotifier {
         );
       }
 
-      await _cacheService.saveProducts(
-        adminProducts
-            .map((e) => e.toMap())
-            .toList(),
-      );
+      await _saveAdminCache();
 
-      isLoading = false;
       notifyListeners();
 
       return true;
     } catch (e) {
       errorMessage = e.toString();
 
-      isLoading = false;
       notifyListeners();
 
       return false;
     }
   }
 
-  // ================= STOCK HELPERS =================
-  List<ProductModel>
-      getLowStockProducts() {
-    return adminProducts.where((p) {
-      return p.stock <= 5;
-    }).toList();
+  // ================= CACHE SAVE =================
+  Future<void> _saveAdminCache() async {
+    await _cacheService.productBox.put(
+      "admin_products",
+      adminProducts
+          .map((e) => e.toMap())
+          .toList(),
+    );
   }
 
-  List<ProductModel>
-      getOutOfStockProducts() {
-    return adminProducts.where((p) {
-      return p.stock == 0;
-    }).toList();
+  // ================= STOCK HELPERS =================
+  List<ProductModel> getLowStockProducts() {
+    return adminProducts
+        .where((p) => p.stock <= 5)
+        .toList();
+  }
+
+  List<ProductModel> getOutOfStockProducts() {
+    return adminProducts
+        .where((p) => p.stock == 0)
+        .toList();
   }
 }

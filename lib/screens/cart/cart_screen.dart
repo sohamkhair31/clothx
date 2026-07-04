@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clothx/controllers/auth_controller.dart';
 import 'package:clothx/controllers/cart_controller.dart';
 import 'package:clothx/controllers/order_controller.dart';
@@ -7,6 +8,13 @@ import 'package:provider/provider.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
+
+  String optimizeImage(String url) {
+    return url.replaceFirst(
+      "/upload/",
+      "/upload/f_auto,q_auto,w_200/",
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,11 +63,40 @@ class CartScreen extends StatelessWidget {
                                     BorderRadius.circular(
                                   12,
                                 ),
-                                child: Image.network(
-                                  item.image,
+                                child:
+                                    CachedNetworkImage(
+                                  imageUrl:
+                                      optimizeImage(
+                                    item.image,
+                                  ),
                                   width: 90,
                                   height: 90,
                                   fit: BoxFit.cover,
+                                  placeholder:
+                                      (
+                                        context,
+                                        url,
+                                      ) =>
+                                          const SizedBox(
+                                    width: 90,
+                                    height: 90,
+                                    child: Center(
+                                      child:
+                                          CircularProgressIndicator(
+                                        strokeWidth:
+                                            2,
+                                      ),
+                                    ),
+                                  ),
+                                  errorWidget:
+                                      (
+                                        context,
+                                        url,
+                                        error,
+                                      ) =>
+                                          const Icon(
+                                    Icons.broken_image,
+                                  ),
                                 ),
                               ),
 
@@ -101,12 +138,10 @@ class CartScreen extends StatelessWidget {
                                       Icons.remove,
                                     ),
                                   ),
-
                                   Text(
                                     item.quantity
                                         .toString(),
                                   ),
-
                                   IconButton(
                                     onPressed: () {
                                       cart.increaseQuantity(
@@ -117,7 +152,6 @@ class CartScreen extends StatelessWidget {
                                       Icons.add,
                                     ),
                                   ),
-
                                   IconButton(
                                     onPressed: () {
                                       cart.removeItem(

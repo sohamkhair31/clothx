@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clothx/controllers/admin_controller.dart';
 import 'package:clothx/core/theme/app_theme.dart';
 import 'package:clothx/models/product_model.dart';
@@ -28,12 +29,17 @@ class _AdminProductsScreenState
       final admin =
           context.read<AdminController>();
 
-      // Cache first
       admin.loadAdminProductsFromCache();
 
-      // Server refresh
       await admin.fetchAdminProducts();
     });
+  }
+
+  String optimizeImage(String url) {
+    return url.replaceFirst(
+      "/upload/",
+      "/upload/f_auto,q_auto,w_200/",
+    );
   }
 
   @override
@@ -46,7 +52,6 @@ class _AdminProductsScreenState
         title:
             const Text("Manage Products"),
       ),
-
       floatingActionButton:
           FloatingActionButton(
         onPressed: () {
@@ -60,7 +65,6 @@ class _AdminProductsScreenState
         },
         child: const Icon(Icons.add),
       ),
-
       body: admin.isLoading &&
               admin.adminProducts.isEmpty
           ? const Center(
@@ -117,11 +121,40 @@ class _AdminProductsScreenState
                             BorderRadius.circular(
                           10,
                         ),
-                        child: Image.network(
-                          product.images.first,
+                        child:
+                            CachedNetworkImage(
+                          imageUrl:
+                              optimizeImage(
+                            product.images.first,
+                          ),
                           width: 70,
                           height: 70,
                           fit: BoxFit.cover,
+                          placeholder:
+                              (
+                                context,
+                                url,
+                              ) =>
+                                  const SizedBox(
+                            width: 70,
+                            height: 70,
+                            child: Center(
+                              child:
+                                  CircularProgressIndicator(
+                                strokeWidth:
+                                    2,
+                              ),
+                            ),
+                          ),
+                          errorWidget:
+                              (
+                                context,
+                                url,
+                                error,
+                              ) =>
+                                  const Icon(
+                            Icons.broken_image,
+                          ),
                         ),
                       )
                     : const Icon(
@@ -140,15 +173,12 @@ class _AdminProductsScreenState
                         style:
                             AppTheme.subHeading,
                       ),
-
                       Text(
                         "₹${product.price}",
                       ),
-
                       Text(
                         "Stock: ${product.stock}",
                       ),
-
                       Text(
                         product.isActive
                             ? "Active"
@@ -184,9 +214,8 @@ class _AdminProductsScreenState
                         ),
                       );
                     },
-                    child: const Text(
-                      "Edit",
-                    ),
+                    child:
+                        const Text("Edit"),
                   ),
                 ),
 

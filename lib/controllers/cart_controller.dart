@@ -4,114 +4,122 @@ import '../models/cart_model.dart';
 import '../core/services/cache/cache_service.dart';
 
 class CartController extends ChangeNotifier {
-  final CacheService _cacheService = CacheService();
+  final CacheService _cacheService =
+      CacheService();
 
   List<CartModel> cartItems = [];
 
   double totalPrice = 0;
 
-  // Load cart from Hive
+  // ================= LOAD CART =================
   void loadCart() {
-    final cachedCart = _cacheService.getCart();
+    final cachedCart =
+        _cacheService.getCart();
 
-    cartItems = cachedCart
-        .map<CartModel>(
-          (e) => CartModel.fromMap(
-            Map<String, dynamic>.from(e),
-          ),
-        )
-        .toList();
+    if (cachedCart.isNotEmpty) {
+      cartItems =
+          cachedCart.map<CartModel>((e) {
+        return CartModel.fromMap(
+          Map<String, dynamic>.from(e),
+        );
+      }).toList();
+    }
 
-    calculateTotal();
+    _calculateTotal();
     notifyListeners();
   }
 
-  // Add to cart
-  Future<void> addToCart(CartModel item) async {
+  // ================= ADD TO CART =================
+  Future<void> addToCart(
+    CartModel item,
+  ) async {
     final index = cartItems.indexWhere(
       (cartItem) =>
-          cartItem.productId == item.productId &&
+          cartItem.productId ==
+              item.productId &&
           cartItem.size == item.size,
     );
 
     if (index != -1) {
-      cartItems[index] = CartModel(
-        productId: cartItems[index].productId,
-        name: cartItems[index].name,
-        image: cartItems[index].image,
-        price: cartItems[index].price,
-        size: cartItems[index].size,
-        quantity: cartItems[index].quantity + item.quantity,
+      final oldItem = cartItems[index];
+
+      cartItems[index] = oldItem.copyWith(
+        quantity:
+            oldItem.quantity +
+            item.quantity,
       );
     } else {
       cartItems.add(item);
     }
 
-    await _saveCart();
-    calculateTotal();
-    notifyListeners();
+    await _saveAndRefresh();
   }
 
-  // Increase quantity
-  Future<void> increaseQuantity(int index) async {
-    cartItems[index] = CartModel(
-      productId: cartItems[index].productId,
-      name: cartItems[index].name,
-      image: cartItems[index].image,
-      price: cartItems[index].price,
-      size: cartItems[index].size,
-      quantity: cartItems[index].quantity + 1,
+  // ================= INCREASE =================
+  Future<void> increaseQuantity(
+    int index,
+  ) async {
+    final item = cartItems[index];
+
+    cartItems[index] = item.copyWith(
+      quantity: item.quantity + 1,
     );
 
-    await _saveCart();
-    calculateTotal();
-    notifyListeners();
+    await _saveAndRefresh();
   }
 
-  // Decrease quantity
-  Future<void> decreaseQuantity(int index) async {
-    if (cartItems[index].quantity > 1) {
-      cartItems[index] = CartModel(
-        productId: cartItems[index].productId,
-        name: cartItems[index].name,
-        image: cartItems[index].image,
-        price: cartItems[index].price,
-        size: cartItems[index].size,
-        quantity: cartItems[index].quantity - 1,
-      );
+  // ================= DECREASE =================
+  Future<void> decreaseQuantity(
+    int index,
+  ) async {
+    final item = cartItems[index];
 
-      await _saveCart();
-      calculateTotal();
-      notifyListeners();
+    if (item.quantity <= 1) return;
+
+    cartItems[index] = item.copyWith(
+      quantity: item.quantity - 1,
+    );
+
+    await _saveAndRefresh();
+  }
+
+  // ================= REMOVE ITEM =================
+  Future<void> removeItem(
+    int index,
+  ) async {
+    if (index < 0 ||
+        index >= cartItems.length) {
+      return;
     }
-  }
 
-  // Remove item
-  Future<void> removeItem(int index) async {
     cartItems.removeAt(index);
 
-    await _saveCart();
-    calculateTotal();
-    notifyListeners();
+    await _saveAndRefresh();
   }
 
-  // Total price
-  void calculateTotal() {
-    totalPrice = 0;
-
-    for (var item in cartItems) {
-      totalPrice += item.price * item.quantity;
-    }
+  // ================= TOTAL =================
+  void _calculateTotal() {
+    totalPrice = cartItems.fold(
+      0,
+      (sum, item) =>
+          sum +
+          (item.price *
+              item.quantity),
+    );
   }
 
-  // Save cart in Hive
-  Future<void> _saveCart() async {
+  // ================= SAVE + REFRESH =================
+  Future<void> _saveAndRefresh() async {
     await _cacheService.saveCart(
       cartItems.map((e) => e.toMap()).toList(),
     );
+
+    _calculateTotal();
+
+    notifyListeners();
   }
 
-  // Clear cart
+  // ================= CLEAR CART =================
   Future<void> clearCart() async {
     cartItems.clear();
     totalPrice = 0;

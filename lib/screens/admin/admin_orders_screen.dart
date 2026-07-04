@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clothx/controllers/admin_order_controller.dart';
 import 'package:clothx/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -26,31 +27,31 @@ class _AdminOrdersScreenState
           context.read<
               AdminOrderController>();
 
-      // CACHE FIRST
       controller.loadOrdersFromCache();
 
-      // SERVER REFRESH
       await controller.fetchOrders();
     });
+  }
+
+  String optimizeImage(String url) {
+    return url.replaceFirst(
+      "/upload/",
+      "/upload/f_auto,q_auto,w_150/",
+    );
   }
 
   Color getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case "pending":
         return Colors.orange;
-
       case "confirmed":
         return Colors.blue;
-
       case "shipped":
         return Colors.purple;
-
       case "delivered":
         return Colors.green;
-
       case "cancelled":
         return Colors.red;
-
       default:
         return Colors.grey;
     }
@@ -67,7 +68,6 @@ class _AdminOrdersScreenState
         title:
             const Text("Track Orders"),
       ),
-
       body: adminOrder.isLoading &&
               adminOrder.orders.isEmpty
           ? const Center(
@@ -119,7 +119,6 @@ class _AdminOrdersScreenState
                                 style:
                                     AppTheme.subHeading,
                               ),
-
                               Text(
                                 order.orderId,
                               ),
@@ -128,10 +127,9 @@ class _AdminOrdersScreenState
                                 height: 10,
                               ),
 
-                              Text(
+                              const Text(
                                 "User ID",
                               ),
-
                               Text(
                                 order.userId,
                               ),
@@ -201,13 +199,46 @@ class _AdminOrdersScreenState
                                     contentPadding:
                                         EdgeInsets.zero,
                                     leading:
-                                        Image.network(
-                                      item.image,
+                                        CachedNetworkImage(
+                                      imageUrl:
+                                          optimizeImage(
+                                        item.image,
+                                      ),
                                       width:
                                           50,
                                       height:
                                           50,
-                                      fit: BoxFit.cover,
+                                      fit:
+                                          BoxFit.cover,
+                                      placeholder:
+                                          (
+                                            context,
+                                            url,
+                                          ) =>
+                                              const SizedBox(
+                                        width:
+                                            50,
+                                        height:
+                                            50,
+                                        child:
+                                            Center(
+                                          child:
+                                              CircularProgressIndicator(
+                                            strokeWidth:
+                                                2,
+                                          ),
+                                        ),
+                                      ),
+                                      errorWidget:
+                                          (
+                                            context,
+                                            url,
+                                            error,
+                                          ) =>
+                                              const Icon(
+                                        Icons
+                                            .broken_image,
+                                      ),
                                     ),
                                     title: Text(
                                       item.name,

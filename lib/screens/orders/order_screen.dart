@@ -1,6 +1,10 @@
+<<<<<<< HEAD
 import 'dart:async';
 import 'dart:ui';
 
+=======
+import 'package:cached_network_image/cached_network_image.dart';
+>>>>>>> b0ced26b39c53e966cea1a49ca07b5396d35de3e
 import 'package:clothx/controllers/auth_controller.dart';
 import 'package:clothx/controllers/order_controller.dart';
 // Reusing the exact same design system (colors + breakpoints) defined on
@@ -45,9 +49,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
       final user = auth.currentUser;
 
-      // Stop if no user logged in
       if (user == null) return;
 
+<<<<<<< HEAD
       // Load cache first
       orderController.loadOrdersFromCache(user.uid);
 
@@ -69,6 +73,25 @@ class _OrdersScreenState extends State<OrdersScreen> {
   // ---- unchanged business logic: identical switch/cases as before ----
   // Only the returned Color values were refined to the Home Page's
   // premium muted palette. The mapping of status -> outcome is untouched.
+=======
+      orderController.loadOrdersFromCache(
+        user.uid,
+      );
+
+      await orderController.fetchOrders(
+        user.uid,
+      );
+    });
+  }
+
+  String optimizeImage(String url) {
+    return url.replaceFirst(
+      "/upload/",
+      "/upload/f_auto,q_auto,w_150/",
+    );
+  }
+
+>>>>>>> b0ced26b39c53e966cea1a49ca07b5396d35de3e
   Color getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case "pending":
@@ -315,6 +338,7 @@ class _OrdersHeader extends StatelessWidget {
 
   static const _filters = ['All', 'Active', 'Delivered', 'Cancelled'];
 
+<<<<<<< HEAD
   @override
   Widget build(BuildContext context) {
     final desktop = NVBreak.isDesktop(width);
@@ -362,6 +386,176 @@ class _OrdersHeader extends StatelessWidget {
                         ),
                       ),
                     ],
+=======
+                      return Card(
+                        margin:
+                            const EdgeInsets.all(
+                          12,
+                        ),
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.all(
+                            16,
+                          ),
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment
+                                    .start,
+                            children: [
+                              Text(
+                                "Order ID",
+                                style:
+                                    AppTheme.subHeading,
+                              ),
+
+                              Text(
+                                item.orderId,
+                              ),
+
+                              const SizedBox(
+                                  height: 10),
+
+                              Text(
+                                "Total: ₹${item.totalAmount}",
+                                style:
+                                    AppTheme.body,
+                              ),
+
+                              const SizedBox(
+                                  height: 10),
+
+                              Container(
+                                padding:
+                                    const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration:
+                                    BoxDecoration(
+                                  color:
+                                      getStatusColor(
+                                    item.orderStatus,
+                                  ),
+                                  borderRadius:
+                                      BorderRadius.circular(
+                                    20,
+                                  ),
+                                ),
+                                child: Text(
+                                  item.orderStatus
+                                      .toUpperCase(),
+                                  style:
+                                      const TextStyle(
+                                    color:
+                                        Colors.white,
+                                    fontWeight:
+                                        FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(
+                                  height: 15),
+
+                              Text(
+                                "Products",
+                                style:
+                                    AppTheme.subHeading,
+                              ),
+
+                              const SizedBox(
+                                  height: 10),
+
+                              ...item.items.map(
+                                (cartItem) {
+                                  return ListTile(
+                                    contentPadding:
+                                        EdgeInsets.zero,
+                                    leading:
+                                        CachedNetworkImage(
+                                      imageUrl:
+                                          optimizeImage(
+                                        cartItem.image,
+                                      ),
+                                      width: 50,
+                                      height: 50,
+                                      fit:
+                                          BoxFit.cover,
+                                      placeholder:
+                                          (
+                                            context,
+                                            url,
+                                          ) =>
+                                              const SizedBox(
+                                        width: 50,
+                                        height: 50,
+                                        child:
+                                            Center(
+                                          child:
+                                              CircularProgressIndicator(
+                                            strokeWidth:
+                                                2,
+                                          ),
+                                        ),
+                                      ),
+                                      errorWidget:
+                                          (
+                                            context,
+                                            url,
+                                            error,
+                                          ) =>
+                                              const Icon(
+                                        Icons
+                                            .broken_image,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      cartItem.name,
+                                    ),
+                                    subtitle:
+                                        Text(
+                                      "Size: ${cartItem.size} | Qty: ${cartItem.quantity}",
+                                    ),
+                                    trailing:
+                                        Text(
+                                      "₹${cartItem.price}",
+                                    ),
+                                  );
+                                },
+                              ),
+
+                              const SizedBox(
+                                  height: 10),
+
+                              if (item.orderStatus
+                                      .toLowerCase() ==
+                                  "pending")
+                                SizedBox(
+                                  width:
+                                      double.infinity,
+                                  child:
+                                      ElevatedButton(
+                                    onPressed:
+                                        () async {
+                                      await context
+                                          .read<
+                                              OrderController>()
+                                          .cancelOrder(
+                                            item.orderId,
+                                          );
+                                    },
+                                    child:
+                                        const Text(
+                                      "Cancel Order",
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+>>>>>>> b0ced26b39c53e966cea1a49ca07b5396d35de3e
                   ),
                 ),
               ],
