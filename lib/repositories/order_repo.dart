@@ -1,3 +1,4 @@
+import 'package:clothx/core/services/cache/cache_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/order_model.dart';
@@ -6,124 +7,197 @@ class OrderRepo {
   final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
 
+  static const int orderLimit = 20;
+
   // ================= PLACE ORDER =================
+
   Future<void> placeOrder(
     OrderModel order,
   ) async {
     await _firestore.runTransaction(
       (transaction) async {
-        // Validate stock + reduce stock
-        for (var item in order.items) {
-          final productRef =
-              _firestore
-                  .collection("products")
-                  .doc(item.productId);
+        // -------------------------
+        // STEP 1 : Validate Stock
+        // -------------------------
+
+        final Map<DocumentReference, int> stockUpdates =
+            {};
+
+        for (final item in order.items) {
+          final productRef = _firestore
+              .collection("products")
+              .doc(item.productId);
 
           final productDoc =
-              await transaction.get(
-            productRef,
-          );
+              await transaction.get(productRef);
 
           if (!productDoc.exists) {
             throw Exception(
-              "Product not found: ${item.name}",
+              "${item.name} no longer exists.",
             );
           }
 
-          final currentStock =
-              productDoc["stock"] ?? 0;
+          final data = productDoc.data()!;
 
-          if (item.quantity >
-              currentStock) {
+          final bool isActive =
+              data["isActive"] ?? true;
+
+          if (!isActive) {
             throw Exception(
-              "Not enough stock for ${item.name}",
+              "${item.name} is unavailable.",
             );
           }
 
-          transaction.update(
-            productRef,
-            {
-              "stock":
-                  currentStock -
-                  item.quantity,
-              "updatedAt":
-                  FieldValue.serverTimestamp(),
-            },
-          );
+          final int stock =
+              data["stock"] ?? 0;
+
+          if (stock < item.quantity) {
+            throw Exception(
+              "Only $stock ${item.name} left in stock.",
+            );
+          }
+
+          stockUpdates[productRef] =
+              stock - item.quantity;
         }
 
-        // Save order
-        final orderRef =
-            _firestore
-                .collection("orders")
-                .doc(order.orderId);
+        // -------------------------
+        // STEP 2 : Update Stock
+        // -------------------------
+
+        stockUpdates.forEach((ref, stock) {
+          transaction.update(ref, {
+            "stock": stock,
+            "updatedAt":
+                FieldValue.serverTimestamp(),
+          });
+        });
+
+        // -------------------------
+        // STEP 3 : Save Order
+        // -------------------------
+
+        final orderRef = _firestore
+            .collection("orders")
+            .doc(order.orderId);
 
         transaction.set(
           orderRef,
           order.toFirestoreMap(),
         );
 
-        // Update user-specific meta
-        final metaRef =
-            _firestore
-                .collection("app_meta")
-                .doc(
-                  "orders_${order.userId}",
-                );
+        // -------------------------
+        // STEP 4 : Update Products Meta
+        // -------------------------
 
-        transaction.set(metaRef, {
-          "lastUpdated":
-              FieldValue.serverTimestamp(),
-        });
+        transaction.set(
+          _firestore
+              .collection("app_meta")
+              .doc("products"),
+          {
+            "lastUpdated":
+                FieldValue.serverTimestamp(),
+          },
+        );
+
+        // -------------------------
+        // STEP 5 : Update User Orders Meta
+        // -------------------------
+
+        transaction.set(
+          _firestore
+              .collection("app_meta")
+              .doc("orders_${order.userId}"),
+          {
+            "lastUpdated":
+                FieldValue.serverTimestamp(),
+          },
+        );
+
+        // -------------------------
+        // STEP 6 : Update Admin Orders Meta
+        // -------------------------
+
+        transaction.set(
+          _firestore
+              .collection("app_meta")
+              .doc("admin_orders"),
+          {
+            "lastUpdated":
+                FieldValue.serverTimestamp(),
+          },
+        );
       },
     );
   }
 
   // ================= FETCH USER ORDERS =================
-  Future<List<OrderModel>> fetchOrders(
-    String userId, {
-    int limit = 20,
-  }) async {
-    final snapshot =
-        await _firestore
-            .collection("orders")
-            .where(
-              "userId",
-              isEqualTo: userId,
-            )
-            .orderBy(
-              "createdAt",
-              descending: true,
-            )
-            .limit(limit)
-            .get();
 
-    return snapshot.docs.map((doc) {
-      return OrderModel.fromMap(
-        doc.data(),
-      );
-    }).toList();
+// ================= FETCH USER ORDERS =================
+
+Future<List<OrderModel>> fetchOrders(
+  String userId, {
+  int limit = orderLimit,
+}) async {
+  final cacheService = CacheService();
+
+final localMeta =
+    cacheService.getOrdersMeta(userId);
+
+  final serverMeta = await getOrdersMeta(userId);
+
+  // Load cached orders
+  final cachedOrders = cacheService.getOrders(userId);
+
+  // Cache is up-to-date
+  if (localMeta == serverMeta &&
+      cachedOrders.isNotEmpty) {
+    return cachedOrders;
   }
 
-  // ================= GET USER META =================
+  final snapshot = await _firestore
+      .collection("orders")
+      .where(
+        "userId",
+        isEqualTo: userId,
+      )
+      .orderBy(
+        "createdAt",
+        descending: true,
+      )
+      .limit(limit)
+      .get();
+
+  final orders = snapshot.docs
+      .map((doc) => OrderModel.fromMap(doc.data()))
+      .toList();
+
+await cacheService.saveOrders(
+  userId,
+  orders,
+);
+
+await cacheService.saveOrdersMeta(
+  userId,
+  serverMeta,
+);
+
+  return orders;
+}
+  // ================= USER META =================
+
   Future<String> getOrdersMeta(
     String userId,
   ) async {
-    final doc =
-        await _firestore
-            .collection("app_meta")
-            .doc(
-              "orders_$userId",
-            )
-            .get();
+    final doc = await _firestore
+        .collection("app_meta")
+        .doc("orders_$userId")
+        .get();
 
-    if (!doc.exists) {
-      return "";
-    }
+    if (!doc.exists) return "";
 
     final timestamp =
-        doc["lastUpdated"]
-            as Timestamp;
+        doc["lastUpdated"] as Timestamp;
 
     return timestamp
         .toDate()

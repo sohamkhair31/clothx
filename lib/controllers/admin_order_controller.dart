@@ -19,22 +19,13 @@ class AdminOrderController extends ChangeNotifier {
   static const int orderLimit = 50;
 
   // ================= LOAD CACHE =================
-  void loadOrdersFromCache() {
-    final cachedOrders =
-        _cacheService.getOrders("admin");
+void loadOrdersFromCache() {
+  orders = _cacheService.getOrders("admin");
 
-    if (cachedOrders.isNotEmpty) {
-      orders =
-          cachedOrders.map<OrderModel>((e) {
-        return OrderModel.fromMap(
-          Map<String, dynamic>.from(e),
-        );
-      }).toList();
-
-      notifyListeners();
-    }
+  if (orders.isNotEmpty) {
+    notifyListeners();
   }
-
+}
   // ================= FETCH ORDERS =================
   Future<void> fetchOrders() async {
     try {
@@ -43,17 +34,16 @@ class AdminOrderController extends ChangeNotifier {
       notifyListeners();
 
       // Local meta
-      final localMeta =
-          _cacheService.orderBox.get(
-        "orders_meta_admin",
-      );
+final localMeta =
+    _cacheService.getOrdersMeta("admin");
 
       // Server meta
       final serverMeta =
           await _adminOrderRepo.getOrdersMeta();
 
       // If same, skip fetch
-      if (localMeta == serverMeta) {
+if (localMeta == serverMeta &&
+    orders.isNotEmpty) {
         print(
           "Admin orders unchanged. Using cache.",
         );
@@ -70,29 +60,32 @@ class AdminOrderController extends ChangeNotifier {
       );
 
       // Save cache
-      await _cacheService.saveOrders(
-        "admin",
-        orders.map((e) => e.toMap()).toList(),
-      );
+await _cacheService.saveOrders(
+  "admin",
+  orders,
+);
 
       // Save meta
-      await _cacheService.orderBox.put(
-        "orders_meta_admin",
-        serverMeta,
-      );
+await _cacheService.saveOrdersMeta(
+  "admin",
+  serverMeta,
+);
 
       isLoading = false;
       notifyListeners();
-    } catch (e) {
-      errorMessage = e.toString();
+   } catch (e) {
+  errorMessage = e.toString();
 
-      print(
-        "Admin fetch orders error: $e",
-      );
+  print(
+    "Admin fetch orders error: $e",
+  );
 
-      isLoading = false;
-      notifyListeners();
-    }
+  // Load cached orders if network fails
+  orders = _cacheService.getOrders("admin");
+
+  isLoading = false;
+  notifyListeners();
+}
   }
 
   // ================= UPDATE STATUS =================
@@ -122,10 +115,10 @@ class AdminOrderController extends ChangeNotifier {
       }
 
       // Update local cache
-      await _cacheService.saveOrders(
-        "admin",
-        orders.map((e) => e.toMap()).toList(),
-      );
+await _cacheService.saveOrders(
+  "admin",
+  orders,
+);
 
       isLoading = false;
       notifyListeners();

@@ -1,159 +1,159 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../models/product_model.dart';
 import '../core/services/cache/cache_service.dart';
+import '../models/product_model.dart';
+import '../repositories/product_repo.dart';
 
 class ProductController extends ChangeNotifier {
-  final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance;
-
-  final CacheService _cacheService =
-      CacheService();
+  final ProductRepo _productRepo = ProductRepo();
+  final CacheService _cacheService = CacheService();
 
   List<ProductModel> products = [];
 
   bool isLoading = false;
   String? errorMessage;
 
-  bool loadedFromCache = false;
-  bool loadedFromServer = false;
+  static const int productLimit = 100;
 
-  DateTime? lastCacheLoad;
-  DateTime? lastServerFetch;
+  // ================= LOAD CACHE =================
 
+void loadProductsFromCache() {
+  print("========== LOAD PRODUCTS FROM CACHE ==========");
+
+  final cachedProducts =
+      _cacheService.productBox.get(
+    "product_list",
+    defaultValue: [],
+  );
+
+  print(
+    "Raw cache count: ${cachedProducts.length}",
+  );
+
+  if (cachedProducts.isNotEmpty) {
+    products =
+        cachedProducts.map<ProductModel>((e) {
+      return ProductModel.fromMap(
+        Map<String, dynamic>.from(e),
+      );
+    }).toList();
+
+    print(
+      "Loaded ${products.length} products from cache.",
+    );
+
+    if (products.isNotEmpty) {
+      print("----- First Product -----");
+      print("ID: ${products.first.id}");
+      print("Name: ${products.first.name}");
+      print("Price: ${products.first.price}");
+      print("Category: ${products.first.category}");
+      print("Gender: ${products.first.gender}");
+      print("Stock: ${products.first.stock}");
+      print("Colors: ${products.first.colors.length}");
+      if (products.first.colors.isNotEmpty) {
+        print(
+          "First Image: ${products.first.colors.first.image}",
+        );
+      }
+      print("-------------------------");
+    }
+
+    notifyListeners();
+  } else {
+    print("No cached products found.");
+  }
+
+  print("==============================================");
+}
   // ================= FETCH PRODUCTS =================
-  Future<void> fetchProducts() async {
+
+Future<void> fetchProducts() async {
+  try {
+    isLoading = true;
+    errorMessage = null;
+
+    if (products.isEmpty) {
+      notifyListeners();
+    }
+
+    final localMeta = _cacheService.getLastMeta();
+
+    print("========== PRODUCT FETCH ==========");
+    print("Local Meta : $localMeta");
+
+    final serverMeta =
+        await _productRepo.getProductsMeta();
+
+    print("Server Meta: $serverMeta");
+
+    if (localMeta == serverMeta &&
+        products.isNotEmpty) {
+      print(
+        "Products unchanged. Using cache (${products.length})",
+      );
+
+      isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    products =
+        await _productRepo.fetchProducts(
+      limit: productLimit,
+    );
+
+    print(
+      "Firestore returned ${products.length} products",
+    );
+
+    await _cacheService.saveProducts(
+      products
+          .map((e) => e.toMap())
+          .toList(),
+    );
+
+    await _cacheService.saveLastMeta(
+      serverMeta,
+    );
+
+    print("Products saved to Hive");
+
+    isLoading = false;
+    notifyListeners();
+  } catch (e, s) {
+    errorMessage = e.toString();
+
+    print("PRODUCT FETCH ERROR");
+    print(e);
+    print(s);
+
+    isLoading = false;
+    notifyListeners();
+  }
+}
+  // ================= FORCE REFRESH =================
+
+  Future<void> refreshProducts() async {
     try {
       isLoading = true;
-      errorMessage = null;
       notifyListeners();
 
-      // STEP 1: LOAD CACHE FIRST
-      final cachedProducts =
-          _cacheService.getProducts();
-
-      if (cachedProducts.isNotEmpty) {
-        products =
-            cachedProducts.map<ProductModel>((e) {
-          return ProductModel.fromMap(
-            Map<String, dynamic>.from(e),
-          );
-        }).toList();
-
-        loadedFromCache = true;
-        lastCacheLoad = DateTime.now();
-
-        notifyListeners();
-      }
-
-      // STEP 2: LOCAL META
-      final localMeta =
-          _cacheService.getLastMeta();
-
-      // STEP 3: SERVER META
-      final metaDoc = await _firestore
-          .collection("app_meta")
-          .doc("products")
-          .get();
-
-      if (!metaDoc.exists) {
-        isLoading = false;
-        notifyListeners();
-        return;
-      }
+      products =
+          await _productRepo.fetchProducts(
+        limit: productLimit,
+      );
 
       final serverMeta =
-          (metaDoc["lastUpdated"] as Timestamp)
-              .toDate()
-              .toIso8601String();
+          await _productRepo.getProductsMeta();
 
-      // STEP 4: SKIP IF SAME
-      if (localMeta == serverMeta) {
-        print(
-          "No changes. Using cache only.",
-        );
-
-        loadedFromServer = false;
-
-        isLoading = false;
-        notifyListeners();
-        return;
-      }
-
-      QuerySnapshot<Map<String, dynamic>>
-          snapshot;
-
-      // STEP 5A: FIRST FETCH
-      if (products.isEmpty) {
-        snapshot = await _firestore
-            .collection("products")
-            .where(
-              "isActive",
-              isEqualTo: true,
-            )
-            .orderBy("updatedAt")
-            .get();
-      }
-
-      // STEP 5B: INCREMENTAL FETCH
-      else {
-        final latestProductTime =
-            products
-                .map((e) => e.updatedAt)
-                .reduce(
-                  (a, b) =>
-                      a.isAfter(b)
-                          ? a
-                          : b,
-                );
-
-        snapshot = await _firestore
-            .collection("products")
-            .where(
-              "isActive",
-              isEqualTo: true,
-            )
-            .where(
-              "updatedAt",
-              isGreaterThan:
-                  Timestamp.fromDate(
-                latestProductTime,
-              ),
-            )
-            .orderBy("updatedAt")
-            .get();
-      }
-
-      final newProducts =
-          snapshot.docs.map((doc) {
-        return ProductModel.fromMap(
-          doc.data(),
-        );
-      }).toList();
-
-      // STEP 6: MERGE
-      for (var newProduct in newProducts) {
-        final index = products.indexWhere(
-          (p) => p.id == newProduct.id,
-        );
-
-        if (index != -1) {
-          products[index] = newProduct;
-        } else {
-          products.add(newProduct);
-        }
-      }
-
-      loadedFromServer = true;
-      lastServerFetch = DateTime.now();
-
-      // STEP 7: SAVE CACHE
-      await _cacheService.saveProducts(
+      await _cacheService.productBox.put(
+        "product_list",
         products.map((e) => e.toMap()).toList(),
       );
 
-      await _cacheService.saveLastMeta(
+      await _cacheService.productBox.put(
+        "products_meta",
         serverMeta,
       );
 
@@ -162,47 +162,32 @@ class ProductController extends ChangeNotifier {
     } catch (e) {
       errorMessage = e.toString();
 
-      print(
-        "ProductController Error: $e",
-      );
-
       isLoading = false;
       notifyListeners();
     }
   }
 
-  // ================= CACHE ONLY =================
-  void loadFromCacheOnly() {
-    final cachedProducts =
-        _cacheService.getProducts();
+  // ================= GETTERS =================
 
-    if (cachedProducts.isNotEmpty) {
-      products =
-          cachedProducts.map<ProductModel>((e) {
-        return ProductModel.fromMap(
-          Map<String, dynamic>.from(e),
-        );
-      }).toList();
+  List<ProductModel> get menProducts =>
+      products
+          .where((e) => e.gender == "men")
+          .toList();
 
-      loadedFromCache = true;
-      lastCacheLoad = DateTime.now();
+  List<ProductModel> get womenProducts =>
+      products
+          .where((e) => e.gender == "women")
+          .toList();
 
-      notifyListeners();
-    }
-  }
-
-  // ================= CLEAR CACHE =================
-  Future<void> clearLocalCache() async {
-    await _cacheService.clearProducts();
-
-    products.clear();
-
-    loadedFromCache = false;
-    loadedFromServer = false;
-
-    lastCacheLoad = null;
-    lastServerFetch = null;
-
-    notifyListeners();
+  List<ProductModel> byCategory(
+    String category,
+  ) {
+    return products
+        .where(
+          (e) =>
+              e.category.toLowerCase() ==
+              category.toLowerCase(),
+        )
+        .toList();
   }
 }

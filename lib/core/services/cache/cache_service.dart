@@ -1,3 +1,4 @@
+import 'package:clothx/models/order_model.dart';
 import 'package:hive/hive.dart';
 
 class CacheService {
@@ -7,7 +8,8 @@ class CacheService {
   factory CacheService() => _instance;
 
   CacheService._internal();
-
+static const String addressBoxName =
+    "addresses";
   static const String productBoxName =
       "products";
   static const String reviewBoxName =
@@ -20,7 +22,7 @@ class CacheService {
       "orders";
   static const String adminBoxName =
       "admin";
-
+late Box addressBox;
   late Box productBox;
   late Box reviewBox;
   late Box cartBox;
@@ -29,6 +31,8 @@ class CacheService {
   late Box adminBox;
 
   Future<void> init() async {
+    addressBox =
+    await Hive.openBox(addressBoxName);
     productBox =
         await Hive.openBox(productBoxName);
 
@@ -47,7 +51,56 @@ class CacheService {
     adminBox =
         await Hive.openBox(adminBoxName);
   }
+  
+  //================= ADDRESSES =================
+  // ================= ADDRESSES =================
 
+Future<void> saveAddresses(
+  String userId,
+  List<Map<String, dynamic>> addresses,
+) async {
+  await addressBox.put(
+    "addresses_$userId",
+    addresses,
+  );
+}
+
+List getAddresses(String userId) {
+  return addressBox.get(
+    "addresses_$userId",
+    defaultValue: [],
+  );
+}
+
+Future<void> saveAddressesMeta(
+  String userId,
+  String meta,
+) async {
+  await addressBox.put(
+    "addresses_meta_$userId",
+    meta,
+  );
+}
+
+String? getAddressesMeta(
+  String userId,
+) {
+  return addressBox.get(
+    "addresses_meta_$userId",
+  );
+}
+
+Future<void> clearAddresses(
+  String userId,
+) async {
+  await addressBox.delete(
+    "addresses_$userId",
+  );
+
+  await addressBox.delete(
+    "addresses_meta_$userId",
+  );
+}
   // ================= PRODUCTS =================
   Future<void> saveProducts(
     List<Map<String, dynamic>> products,
@@ -177,49 +230,66 @@ class CacheService {
   }
 
   // ================= ORDERS =================
-  Future<void> saveOrders(
-    String userId,
-    List<Map<String, dynamic>> orders,
-  ) async {
-    await orderBox.put(
-      "orders_$userId",
-      orders,
-    );
-  }
+// ================= ORDERS =================
 
-  List getOrders(String userId) {
-    return orderBox.get(
-      "orders_$userId",
-      defaultValue: [],
-    );
-  }
+Future<void> saveOrders(
+  String userId,
+  List<OrderModel> orders,
+) async {
+  await orderBox.put(
+    "orders_$userId",
+    orders
+        .map((e) => e.toMap())
+        .toList(),
+  );
+}
 
-  Future<void> saveOrdersMeta(
-    String userId,
-    String meta,
-  ) async {
-    await orderBox.put(
-      "orders_meta_$userId",
-      meta,
-    );
-  }
+List<OrderModel> getOrders(
+  String userId,
+) {
+  final data = orderBox.get(
+    "orders_$userId",
+    defaultValue: [],
+  );
 
-  String? getOrdersMeta(
-    String userId,
-  ) {
-    return orderBox.get(
-      "orders_meta_$userId",
-    );
-  }
+  return (data as List)
+      .map<OrderModel>(
+        (e) => OrderModel.fromMap(
+          Map<String, dynamic>.from(e),
+        ),
+      )
+      .toList();
+}
 
-  Future<void> clearOrders(
-    String userId,
-  ) async {
-    await orderBox.delete(
-      "orders_$userId",
-    );
-  }
+Future<void> saveOrdersMeta(
+  String userId,
+  String meta,
+) async {
+  await orderBox.put(
+    "orders_meta_$userId",
+    meta,
+  );
+}
 
+String? getOrdersMeta(
+  String userId,
+) {
+  return orderBox.get(
+    "orders_meta_$userId",
+  );
+}
+
+Future<void> clearOrders(
+  String userId,
+) async {
+  await orderBox.delete(
+    "orders_$userId",
+  );
+
+  await orderBox.delete(
+    "orders_meta_$userId",
+  );
+}
   // ================= ADMIN =================
   Future<void> saveAdminProducts(
     List<Map<String, dynamic>> products,
@@ -259,6 +329,7 @@ class CacheService {
     await cartBox.clear();
     await userBox.clear();
     await orderBox.clear();
-    await adminBox.clear();
+await adminBox.clear();
+await addressBox.clear();
   }
 }

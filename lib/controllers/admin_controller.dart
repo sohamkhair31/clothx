@@ -1,5 +1,5 @@
+import 'package:clothx/models/product_color_input.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:clothx/core/services/image/cloudinary_service.dart';
 import 'package:flutter/material.dart';
 
@@ -102,7 +102,7 @@ class AdminController extends ChangeNotifier {
     required String name,
     required String description,
     required double price,
-    required List<XFile> imageFiles,
+required List<ProductColorInput> colorImages,
     required List<String> sizes,
     required int stock,
     required String gender,
@@ -115,32 +115,41 @@ class AdminController extends ChangeNotifier {
 
       List<String> imageUrls = [];
 
-      for (var image in imageFiles) {
-        final originalBytes =
-            await image.readAsBytes();
+List<ProductColor> colors = [];
 
-        final compressedBytes =
-            await FlutterImageCompress.compressWithList(
-          originalBytes,
-          format: CompressFormat.webp,
-          quality: 65,
-          minWidth: 1200,
-          minHeight: 1200,
-        );
+for (final item in colorImages) {
+  final image = item.image;
 
-        final uploadedUrl =
-            await _cloudinaryService.uploadImage(
-          imageBytes: compressedBytes,
-          fileName: image.name,
-          gender: gender,
-          category: category,
-        );
+  if (image == null) continue;
 
-        if (uploadedUrl != null) {
-          imageUrls.add(uploadedUrl);
-        }
-      }
+  final originalBytes = await image.readAsBytes();
 
+  final compressedBytes =
+      await FlutterImageCompress.compressWithList(
+    originalBytes,
+    format: CompressFormat.webp,
+    quality: 65,
+    minWidth: 1200,
+    minHeight: 1200,
+  );
+
+  final uploadedUrl =
+      await _cloudinaryService.uploadImage(
+    imageBytes: compressedBytes,
+    fileName: image.name,
+    gender: gender,
+    category: category,
+  );
+
+  if (uploadedUrl != null) {
+    colors.add(
+      ProductColor(
+        name: item.color,
+        image: uploadedUrl,
+      ),
+    );
+  }
+}
       final now = DateTime.now();
 
       final product = ProductModel(
@@ -148,7 +157,7 @@ class AdminController extends ChangeNotifier {
         name: name.trim(),
         description: description.trim(),
         price: price,
-        images: imageUrls,
+colors: colors,
         sizes: sizes,
         stock: stock,
         gender: gender,

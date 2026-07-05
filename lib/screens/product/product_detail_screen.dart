@@ -76,49 +76,31 @@ class _ProductDetailScreenState
           crossAxisAlignment:
               CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              height: 320,
-              child: PageView.builder(
-                itemCount:
-                    product.images.length,
-                itemBuilder:
-                    (context, index) {
-                  return ClipRRect(
-                    borderRadius:
-                        BorderRadius.circular(
-                      20,
-                    ),
-                    child:
-                        CachedNetworkImage(
-                      imageUrl:
-                          optimizeProductImage(
-                        product.images[index],
-                      ),
-                      fit: BoxFit.cover,
-                      placeholder:
-                          (
-                            context,
-                            url,
-                          ) =>
-                              const Center(
-                        child:
-                            CircularProgressIndicator(),
-                      ),
-                      errorWidget:
-                          (
-                            context,
-                            url,
-                            error,
-                          ) =>
-                              const Icon(
-                        Icons.broken_image,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
+SizedBox(
+  height: 320,
+  child: PageView.builder(
+    itemCount: product.colors.length,
+    itemBuilder: (context, index) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: CachedNetworkImage(
+          imageUrl: optimizeProductImage(
+            product.colors[index].image,
+          ),
+          fit: BoxFit.cover,
+          placeholder: (context, url) =>
+              const Center(
+            child: CircularProgressIndicator(),
+          ),
+          errorWidget: (context, url, error) =>
+              const Icon(
+            Icons.broken_image,
+          ),
+        ),
+      );
+    },
+  ),
+),
             const SizedBox(height: 20),
 
             Text(
@@ -209,46 +191,35 @@ class _ProductDetailScreenState
 
             const SizedBox(height: 20),
 
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () async {
-                  await context
-                      .read<
-                          CartController>()
-                      .addToCart(
-                        CartModel(
-                          productId:
-                              product.id,
-                          name:
-                              product.name,
-                          image: product
-                              .images.first,
-                          price:
-                              product.price,
-                          size:
-                              selectedSize,
-                          quantity:
-                              quantity,
-                        ),
-                      );
-
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        "Added to cart",
-                      ),
-                    ),
-                  );
-                },
-                child: const Text(
-                  "Add To Cart",
-                ),
-              ),
+          SizedBox(
+  width: double.infinity,
+  child: ElevatedButton(
+    onPressed: () async {
+      await context
+          .read<CartController>()
+          .addToCart(
+            CartModel(
+              productId: product.id,
+              name: product.name,
+              image: product.colors.first.image,
+              color: product.colors.first.name,
+              price: product.price,
+              size: selectedSize,
+              quantity: quantity,
             ),
+          );
 
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Added to cart"),
+        ),
+      );
+    },
+    child: const Text("Add To Cart"),
+  ),
+),
             const SizedBox(height: 30),
 
             Text(

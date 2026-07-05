@@ -1,5 +1,6 @@
 import 'package:clothx/controllers/admin_controller.dart';
 import 'package:clothx/core/theme/app_theme.dart';
+import 'package:clothx/models/product_color_input.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -31,7 +32,7 @@ class _AdminAddProductScreenState
       TextEditingController();
 
   final List<XFile> images = [];
-
+final List<ProductColorInput> colors = [];
   final List<String> selectedSizes =
       [];
 
@@ -68,27 +69,21 @@ class _AdminAddProductScreenState
     }
 
     final success =
-        await admin.addProduct(
-      name: nameController.text.trim(),
-      description:
-          descriptionController.text.trim(),
-      price: double.parse(
-        priceController.text,
-      ),
-      imageFiles: images,
-      sizes: selectedSizes,
-      stock: int.parse(
-        stockController.text,
-      ),
-      gender: selectedGender,
-      category: selectedCategory,
-    );
-
-    if (!mounted) return;
-
-    if (success) {
-      Navigator.pop(context);
-    }
+    await admin.addProduct(
+  name: nameController.text.trim(),
+  description:
+      descriptionController.text.trim(),
+  price: double.parse(
+    priceController.text,
+  ),
+  colorImages: colors,
+  sizes: selectedSizes,
+  stock: int.parse(
+    stockController.text,
+  ),
+  gender: selectedGender,
+  category: selectedCategory,
+);
   }
 
   @override

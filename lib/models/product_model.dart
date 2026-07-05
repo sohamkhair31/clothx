@@ -1,13 +1,47 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+class ProductColor {
+  final String name;
+  final String image;
+
+  ProductColor({
+    required this.name,
+    required this.image,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      "name": name,
+      "image": image,
+    };
+  }
+
+  factory ProductColor.fromMap(Map<String, dynamic> map) {
+    return ProductColor(
+      name: map["name"] ?? "",
+      image: map["image"] ?? "",
+    );
+  }
+
+  String toJson() => jsonEncode(toMap());
+
+  factory ProductColor.fromJson(String source) =>
+      ProductColor.fromMap(jsonDecode(source));
+}
+
 class ProductModel {
   final String id;
   final String name;
   final String description;
   final double price;
-  final List<String> images;
+
+  /// One image for each color
+  final List<ProductColor> colors;
+
+  /// Same sizes for all colors
   final List<String> sizes;
+
   final int stock;
   final String category;
   final DateTime createdAt;
@@ -20,7 +54,7 @@ class ProductModel {
     required this.name,
     required this.description,
     required this.price,
-    required this.images,
+    required this.colors,
     required this.sizes,
     required this.stock,
     required this.category,
@@ -30,14 +64,14 @@ class ProductModel {
     required this.isActive,
   });
 
-  // CACHE MAP (Hive-safe)
+  // Hive Cache Map
   Map<String, dynamic> toMap() {
     return {
       "id": id,
       "name": name,
       "description": description,
       "price": price,
-      "images": images,
+      "colors": colors.map((e) => e.toMap()).toList(),
       "sizes": sizes,
       "stock": stock,
       "category": category,
@@ -48,14 +82,14 @@ class ProductModel {
     };
   }
 
-  // FIRESTORE MAP (Timestamp-safe)
+  // Firestore Map
   Map<String, dynamic> toFirestoreMap() {
     return {
       "id": id,
       "name": name,
       "description": description,
       "price": price,
-      "images": images,
+      "colors": colors.map((e) => e.toMap()).toList(),
       "sizes": sizes,
       "stock": stock,
       "category": category,
@@ -66,16 +100,23 @@ class ProductModel {
     };
   }
 
-  factory ProductModel.fromMap(
-    Map<String, dynamic> map,
-  ) {
+  factory ProductModel.fromMap(Map<String, dynamic> map) {
     return ProductModel(
       id: map["id"] ?? "",
       name: map["name"] ?? "",
       description: map["description"] ?? "",
       price: (map["price"] ?? 0).toDouble(),
-      images: List<String>.from(map["images"] ?? []),
+
+      colors: (map["colors"] as List? ?? [])
+          .map(
+            (e) => ProductColor.fromMap(
+              Map<String, dynamic>.from(e),
+            ),
+          )
+          .toList(),
+
       sizes: List<String>.from(map["sizes"] ?? []),
+
       stock: map["stock"] ?? 0,
       category: map["category"] ?? "",
       gender: map["gender"] ?? "unisex",
@@ -90,47 +131,39 @@ class ProductModel {
           : DateTime.parse(map["updatedAt"]),
     );
   }
-ProductModel copyWith({
-  String? id,
-  String? name,
-  String? description,
-  double? price,
-  List<String>? images,
-  List<String>? sizes,
-  int? stock,
-  String? gender,
-  String? category,
-  bool? isActive,
-  DateTime? createdAt,
-  DateTime? updatedAt,
-}) {
-  return ProductModel(
-    id: id ?? this.id,
-    name: name ?? this.name,
-    description:
-        description ?? this.description,
-    price: price ?? this.price,
-    images: images ?? this.images,
-    sizes: sizes ?? this.sizes,
-    stock: stock ?? this.stock,
-    gender: gender ?? this.gender,
-    category: category ?? this.category,
-    isActive:
-        isActive ?? this.isActive,
-    createdAt:
-        createdAt ?? this.createdAt,
-    updatedAt:
-        updatedAt ?? this.updatedAt,
-  );
-}
+
+  ProductModel copyWith({
+    String? id,
+    String? name,
+    String? description,
+    double? price,
+    List<ProductColor>? colors,
+    List<String>? sizes,
+    int? stock,
+    String? category,
+    String? gender,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return ProductModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      price: price ?? this.price,
+      colors: colors ?? this.colors,
+      sizes: sizes ?? this.sizes,
+      stock: stock ?? this.stock,
+      category: category ?? this.category,
+      gender: gender ?? this.gender,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   String toJson() => jsonEncode(toMap());
 
-  factory ProductModel.fromJson(
-    String source,
-  ) =>
-      ProductModel.fromMap(
-        jsonDecode(source),
-      );
-
-
+  factory ProductModel.fromJson(String source) =>
+      ProductModel.fromMap(jsonDecode(source));
 }

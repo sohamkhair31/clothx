@@ -254,7 +254,9 @@ class CartScreen extends StatelessWidget {
                                               );
 
                                       if (!context
-                                          .mounted) return;
+                                          .mounted) {
+                                        return;
+                                      }
 
                                       ScaffoldMessenger.of(
                                         context,

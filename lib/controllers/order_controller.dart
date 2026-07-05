@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../models/order_model.dart';
-import '../models/cart_model.dart';
 import '../core/services/cache/cache_service.dart';
+import '../models/cart_model.dart';
+import '../models/order_model.dart';
+import '../repositories/order_repo.dart';
 import 'cart_controller.dart';
 
 class OrderController extends ChangeNotifier {
-  final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance;
-
-  final CacheService _cacheService =
-      CacheService();
+  final OrderRepo _orderRepo = OrderRepo();
+  final CacheService _cacheService = CacheService();
 
   List<OrderModel> orders = [];
 
@@ -21,30 +18,26 @@ class OrderController extends ChangeNotifier {
   static const int orderLimit = 20;
 
   // ================= LOAD CACHE =================
-  void loadOrdersFromCache(
-    String userId,
-  ) {
-    final cachedOrders =
-        _cacheService.getOrders(userId);
 
-    if (cachedOrders.isNotEmpty) {
-      orders =
-          cachedOrders.map<OrderModel>((e) {
-        return OrderModel.fromMap(
-          Map<String, dynamic>.from(e),
-        );
-      }).toList();
+void loadOrdersFromCache(
+  String userId,
+) {
+  orders = _cacheService.getOrders(userId);
 
-      notifyListeners();
-    }
+  if (orders.isNotEmpty) {
+    notifyListeners();
   }
-
+}
   // ================= PLACE ORDER =================
+
   Future<bool> placeOrder({
     required String userId,
     required List<CartModel> items,
     required double totalAmount,
     required CartController cartController,
+    // NEW — optional. Defaults to 'Online' so any existing call site that
+    // doesn't pass this keeps getting paymentStatus "Paid" exactly like before.
+    String paymentMethod = 'Online',
   }) async {
     try {
       isLoading = true;
@@ -58,34 +51,34 @@ class OrderController extends ChangeNotifier {
             now.millisecondsSinceEpoch
                 .toString(),
         userId: userId,
-        items: items,
+        items: List<CartModel>.from(items),
         totalAmount: totalAmount,
-        paymentStatus: "Paid",
+        // NEW — Cash on Delivery orders are recorded as unpaid until
+        // delivery; online payments keep the original "Paid" behavior.
+        paymentStatus: paymentMethod == 'COD' ? "Unpaid" : "Paid",
         orderStatus: "Pending",
         createdAt: now,
       );
 
-      await _firestore
-          .collection("orders")
-          .doc(order.orderId)
-          .set(order.toFirestoreMap());
-
-      // Update order meta
-      await _firestore
-          .collection("app_meta")
-          .doc("orders_$userId")
-          .set({
-        "lastUpdated":
-            Timestamp.fromDate(now),
-      });
+      await _orderRepo.placeOrder(order);
 
       await cartController.clearCart();
 
       orders.insert(0, order);
 
-      await _cacheService.saveOrders(
+await _cacheService.saveOrders(
+  userId,
+  orders,
+);
+
+      final serverMeta =
+          await _orderRepo.getOrdersMeta(
         userId,
-        orders.map((e) => e.toMap()).toList(),
+      );
+
+      await _cacheService.saveOrdersMeta(
+        userId,
+        serverMeta,
       );
 
       isLoading = false;
@@ -103,130 +96,110 @@ class OrderController extends ChangeNotifier {
   }
 
   // ================= FETCH ORDERS =================
-Future<void> fetchOrders(
-  String userId,
-) async {
-  try {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
 
-    final localMeta =
-        _cacheService.getOrdersMeta(
-      userId,
-    );
+  Future<void> fetchOrders(
+    String userId,
+  ) async {
+    try {
+      isLoading = true;
+      errorMessage = null;
 
-    final metaDoc = await _firestore
-        .collection("app_meta")
-        .doc("orders_$userId")
-        .get();
+      if (orders.isEmpty) {
+        notifyListeners();
+      }
 
-    if (metaDoc.exists) {
+      final localMeta =
+          _cacheService.getOrdersMeta(
+        userId,
+      );
+
       final serverMeta =
-          (metaDoc["lastUpdated"]
-                  as Timestamp)
-              .toDate()
-              .toIso8601String();
+          await _orderRepo.getOrdersMeta(
+        userId,
+      );
 
-      if (localMeta == serverMeta) {
-        print(
-          "Orders unchanged. Using cache.",
-        );
-
+      if (localMeta == serverMeta &&
+          orders.isNotEmpty) {
         isLoading = false;
         notifyListeners();
         return;
       }
-    }
 
-    final snapshot =
-        await _firestore
-            .collection("orders")
-            .where(
-              "userId",
-              isEqualTo: userId,
-            )
-            .orderBy(
-              "createdAt",
-              descending: true,
-            )
-            .limit(orderLimit)
-            .get();
-
-    orders = snapshot.docs.map((doc) {
-      return OrderModel.fromMap(
-        doc.data(),
+      orders =
+          await _orderRepo.fetchOrders(
+        userId,
+        limit: orderLimit,
       );
-    }).toList();
-
-    await _cacheService.saveOrders(
-      userId,
-      orders.map((e) => e.toMap()).toList(),
-    );
-
-    if (metaDoc.exists) {
-      final serverMeta =
-          (metaDoc["lastUpdated"]
-                  as Timestamp)
-              .toDate()
-              .toIso8601String();
+await _cacheService.saveOrders(
+  userId,
+  orders,
+);
 
       await _cacheService.saveOrdersMeta(
         userId,
         serverMeta,
       );
-    }
 
-    isLoading = false;
-    notifyListeners();
-  } catch (e) {
-    errorMessage = e.toString();
-
-    print(
-      "Fetch Orders Error: $e",
-    );
-
-    isLoading = false;
-    notifyListeners();
-  }
-}
-  // ================= CANCEL ORDER =================
-  Future<void> cancelOrder(
-    String orderId,
-  ) async {
-    try {
-      await _firestore
-          .collection("orders")
-          .doc(orderId)
-          .update({
-        "orderStatus": "Cancelled",
-      });
-
-      final index = orders.indexWhere(
-        (o) => o.orderId == orderId,
-      );
-
-      if (index != -1) {
-        final updatedOrder =
-            orders[index].copyWith(
-          orderStatus: "Cancelled",
-        );
-
-        orders[index] = updatedOrder;
-
-        await _cacheService.saveOrders(
-          updatedOrder.userId,
-          orders
-              .map((e) => e.toMap())
-              .toList(),
-        );
-      }
-
+      isLoading = false;
       notifyListeners();
     } catch (e) {
       errorMessage = e.toString();
 
+      isLoading = false;
       notifyListeners();
     }
+  }
+
+  // ================= REFRESH =================
+
+  Future<void> refreshOrders(
+    String userId,
+  ) async {
+    try {
+      isLoading = true;
+      notifyListeners();
+
+      orders =
+          await _orderRepo.fetchOrders(
+        userId,
+        limit: orderLimit,
+      );
+
+      final serverMeta =
+          await _orderRepo.getOrdersMeta(
+        userId,
+      );
+
+await _cacheService.saveOrders(
+  userId,
+  orders,
+);
+      await _cacheService.saveOrdersMeta(
+        userId,
+        serverMeta,
+      );
+
+      isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      errorMessage = e.toString();
+
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // ================= CLEAR CACHE =================
+
+  Future<void> clearOrdersCache(
+    String userId,
+  ) async {
+await _cacheService.clearOrders(
+  userId,
+);
+
+    orders.clear();
+
+    notifyListeners();
   }
 }

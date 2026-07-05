@@ -114,87 +114,98 @@ class _AdminProductsScreenState
               CrossAxisAlignment.start,
           children: [
             Row(
-              children: [
-                product.images.isNotEmpty
-                    ? ClipRRect(
-                        borderRadius:
-                            BorderRadius.circular(
-                          10,
-                        ),
-                        child:
-                            CachedNetworkImage(
-                          imageUrl:
-                              optimizeImage(
-                            product.images.first,
-                          ),
-                          width: 70,
-                          height: 70,
-                          fit: BoxFit.cover,
-                          placeholder:
-                              (
-                                context,
-                                url,
-                              ) =>
-                                  const SizedBox(
-                            width: 70,
-                            height: 70,
-                            child: Center(
-                              child:
-                                  CircularProgressIndicator(
-                                strokeWidth:
-                                    2,
-                              ),
-                            ),
-                          ),
-                          errorWidget:
-                              (
-                                context,
-                                url,
-                                error,
-                              ) =>
-                                  const Icon(
-                            Icons.broken_image,
-                          ),
-                        ),
-                      )
-                    : const Icon(
-                        Icons.image,
-                      ),
-
-                const SizedBox(width: 15),
-
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product.name,
-                        style:
-                            AppTheme.subHeading,
-                      ),
-                      Text(
-                        "₹${product.price}",
-                      ),
-                      Text(
-                        "Stock: ${product.stock}",
-                      ),
-                      Text(
-                        product.isActive
-                            ? "Active"
-                            : "Inactive",
-                        style: TextStyle(
-                          color:
-                              product.isActive
-                                  ? Colors.green
-                                  : Colors.red,
-                        ),
-                      ),
-                    ],
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: product.colors.isNotEmpty
+          ? CachedNetworkImage(
+              imageUrl: optimizeImage(
+                product.colors.first.image,
+              ),
+              width: 70,
+              height: 70,
+              fit: BoxFit.cover,
+              placeholder: (context, url) =>
+                  const SizedBox(
+                width: 70,
+                height: 70,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
                   ),
                 ),
-              ],
+              ),
+              errorWidget: (context, url, error) =>
+                  Container(
+                width: 70,
+                height: 70,
+                color: Colors.grey.shade200,
+                child: const Icon(
+                  Icons.broken_image_outlined,
+                ),
+              ),
+            )
+          : Container(
+              width: 70,
+              height: 70,
+              color: Colors.grey.shade200,
+              child: const Icon(
+                Icons.image_outlined,
+              ),
             ),
+    ),
+
+    const SizedBox(width: 15),
+
+    Expanded(
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          Text(
+            product.name,
+            style: AppTheme.subHeading,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+
+          const SizedBox(height: 4),
+
+          Text(
+            "₹${product.price.toStringAsFixed(0)}",
+          ),
+
+          const SizedBox(height: 4),
+
+          Text(
+            "Stock: ${product.stock}",
+          ),
+
+          const SizedBox(height: 4),
+
+          Text(
+            "Colors: ${product.colors.length}",
+          ),
+
+          const SizedBox(height: 4),
+
+          Text(
+            product.isActive
+                ? "Active"
+                : "Inactive",
+            style: TextStyle(
+              color: product.isActive
+                  ? Colors.green
+                  : Colors.red,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    ),
+  ],
+),
 
             const SizedBox(height: 20),
 

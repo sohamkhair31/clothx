@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ReviewModel {
   final String id;
@@ -49,6 +50,18 @@ class ReviewModel {
     );
   }
 
+
+Map<String, dynamic> toFirestoreMap() {
+  return {
+    "id": id,
+    "productId": productId,
+    "userId": userId,
+    "userName": userName,
+    "rating": rating,
+    "comment": comment,
+    "createdAt": Timestamp.fromDate(createdAt),
+  };
+}
   String toJson() => jsonEncode(toMap());
 
   factory ReviewModel.fromJson(String source) =>
