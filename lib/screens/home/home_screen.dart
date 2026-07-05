@@ -1,106 +1,116 @@
-import 'dart:async';
+import 'package:clothx/screens/collections/collections_page.dart';
+import 'package:clothx/screens/home/new_arrivals_page.dart';
+import 'package:clothx/screens/home/profile_page.dart';
+import 'package:clothx/screens/home/about_page.dart';
 import 'dart:ui';
-
-import 'package:clothx/controllers/product_controller.dart';
-import 'package:clothx/models/product_model.dart';
-import 'package:clothx/screens/cart/cart_screen.dart';
-import 'package:clothx/screens/gender/men_screen.dart';
-import 'package:clothx/screens/gender/women_screen.dart';
-import 'package:clothx/screens/product/product_detail_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-/// ============================================================
-/// NEW VISION'S — LUXURY DESIGN SYSTEM
-/// (Color theme only — palette below matches the approved
-/// Ivory / Rich Black / Champagne Gold brand system)
-/// ============================================================
-class NVColors {
-  static const Color richBlack = Color(0xFF0A0A0A); // Navbar / Footer / Hero Heading / Price
-  static const Color ivoryWhite = Color(0xFFFAF8F5); // Main Background
-  static const Color graphite = Color(0xFF2B2B2B); // Paragraph Text / Icon Stroke
-  static const Color warmGray = Color(0xFF5F5A54); // Secondary Text
-  static const Color warmGold = Color(0xFFC8A86B); // Section Labels / View All
-  static const Color champagneGold = Color(0xFFD6C08D); // Navbar/Footer Icons, Active Link
-  static const Color cardWhite = Color(0xFFFFFFFF); // Card Background / Input Field
-  static const Color sectionBeige = Color(0xFFE9E1D3); // Section Background
-  static const Color cardBorderBeige = Color(0xFFEFCDBA); // Card Border / Primary CTA
-  static const Color dividerPlatinum = Color(0xFFE3DED8); // Divider Lines
-  static const Color inputBorderGray = Color(0xFFD9D9D9); // Input Border
-}
+/// =================================================================
+/// NV'S — LUXURY FASHION BRAND HOMEPAGE  (single-file build)
+/// =================================================================
+/// Everything — theme, breakpoints, navbar, hero, and every section
+/// down to the footer — lives in this one file for easy drop-in use.
+///
+/// This version has ZERO external package dependencies:
+///   - No google_fonts        (uses Flutter's built-in TextStyle)
+///   - No cached_network_image (uses Flutter's built-in Image.network)
+///
+/// Other files in this project (men_screen.dart, women_screen.dart,
+/// order_screen.dart, etc.) import `NVColors` and `NVBreak` from this
+/// file — both are defined below, so those imports will now resolve.
+/// =================================================================
 
-/// Responsive breakpoints for Flutter Web.
-class NVBreak {
-  static bool isMobile(double w) => w < 700;
-  static bool isTablet(double w) => w >= 700 && w < 1100;
-  static bool isDesktop(double w) => w >= 1100;
 
-  static double hPad(double w) {
-    if (w < 380) return 14;
-    if (isMobile(w)) return 20;
-    if (isTablet(w)) return 48;
-    return 96;
-  }
 
-  static int gridColumns(double w) {
-    if (isMobile(w)) return 2;
-    if (isTablet(w)) return 3;
-    return 4;
-  }
-}
-
-/// Placeholder editorial photography — replace with real campaign
-/// assets before shipping. Business logic is untouched; only these
-/// are cosmetic image sources.
-class NVImages {
-  static const heroSlides = [
-    'https://picsum.photos/seed/nv-hero-a/1600/1000',
-    'https://picsum.photos/seed/nv-hero-b/1600/1000',
-    'https://picsum.photos/seed/nv-hero-c/1600/1000',
-  ];
-  static const menBanner =
-      'https://picsum.photos/seed/nv-men-editorial/1400/1000';
-  static const womenBanner =
-      'https://picsum.photos/seed/nv-women-editorial/1200/1400';
-  static const exploreBanner =
-      'https://picsum.photos/seed/nv-explore-cinema/1600/900';
-  static const hoodiePromo =
-      'https://picsum.photos/seed/nv-hoodie-promo/1400/1000';
-
-  static const categories = {
-    'Hoodies': 'https://picsum.photos/seed/nv-c-hoodie/700/900',
-    'Oversized Tees': 'https://picsum.photos/seed/nv-c-tee/700/900',
-    'Cargo Pants': 'https://picsum.photos/seed/nv-c-cargo/700/900',
-    'Denim': 'https://picsum.photos/seed/nv-c-denim/700/900',
-    'Jackets': 'https://picsum.photos/seed/nv-c-jacket/700/900',
-    'Accessories': 'https://picsum.photos/seed/nv-c-accessory/700/900',
-    'Sneakers': 'https://picsum.photos/seed/nv-c-sneaker/700/900',
-  };
-}
-
-class HomeScreen extends StatefulWidget {
+/// -----------------------------------------------------------------
+/// APP ROOT
+/// -----------------------------------------------------------------
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: "NV's — Luxury Redefined",
+      debugShowCheckedModeBanner: false,
+      scrollBehavior: const _SmoothScrollBehavior(),
+      theme: ThemeData(
+        useMaterial3: true,
+        scaffoldBackgroundColor: NVColors.ivory,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: NVColors.gold,
+          brightness: Brightness.light,
+        ),
+        fontFamily: 'Roboto',
+        splashFactory: InkRipple.splashFactory,
+      ),
+      home: const HomePage(),
+    );
+  }
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _SmoothScrollBehavior extends MaterialScrollBehavior {
+  const _SmoothScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+      };
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    return const BouncingScrollPhysics(
+      parent: AlwaysScrollableScrollPhysics(),
+    );
+  }
+}
+
+/// -----------------------------------------------------------------
+/// PALETTE & BREAKPOINTS
+/// (Renamed to NVColors / NVBreak so other screens that already
+/// `import 'home_screen.dart' show NVColors, NVBreak;` compile.)
+/// -----------------------------------------------------------------
+class NVColors {
+  static const ivory = Color(0xFFF8F6F2);
+  static const charcoal = Color(0xFF111111);
+  static const beige = Color(0xFFE9E1D3);
+  static const gold = Color(0xFFC9A96E);
+  static const white = Color(0xFFFFFFFF);
+}
+
+class NVBreak {
+  static const mobile = 600.0;
+  static const tablet = 1024.0;
+  static const desktop = 1440.0;
+
+  static bool isMobile(double w) => w < mobile;
+  static bool isTablet(double w) => w >= mobile && w < tablet;
+  static bool isDesktop(double w) => w >= tablet;
+}
+
+/// -----------------------------------------------------------------
+/// HOME PAGE — assembles every section into one scroll view, with
+/// the glass navbar layered fixed on top via a Stack.
+/// -----------------------------------------------------------------
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
-  bool _navSolid = false;
+  double _scrollOffset = 0;
 
   @override
   void initState() {
     super.initState();
-
-    // ---- business logic untouched ----
-    Future.microtask(() async {
-      await context.read<ProductController>().fetchProducts();
-    });
-
     _scrollController.addListener(() {
-      final solid = _scrollController.offset > 40;
-      if (solid != _navSolid) setState(() => _navSolid = solid);
+      setState(() => _scrollOffset = _scrollController.offset);
     });
   }
 
@@ -110,484 +120,313 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final productController = context.watch<ProductController>();
-    final products = productController.products;
-
-    final menProducts = products.where((p) => p.gender == "men").toList();
-    final womenProducts = products.where((p) => p.gender == "women").toList();
-    final bestSellers = products.take(8).toList();
-
-    final width = MediaQuery.of(context).size.width;
-
-    return Scaffold(
-      backgroundColor: NVColors.ivoryWhite,
-      drawer: NVBreak.isDesktop(width) ? null : const _NVDrawer(),
-      body: productController.isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: NVColors.champagneGold),
-            )
-          : products.isEmpty
-              ? const Center(child: Text("No products found"))
-              : Stack(
-                  children: [
-                    CustomScrollView(
-                      controller: _scrollController,
-                      slivers: [
-                        SliverToBoxAdapter(child: _HeroCarousel(width: width)),
-                        SliverToBoxAdapter(
-                          child: _MenSection(
-                            width: width,
-                            onShopMen: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const MenScreen(),
-                              ),
-                            ),
-                          ),
-                        ),
-                        SliverToBoxAdapter(
-                          child: _WomenSection(
-                            width: width,
-                            onShopWomen: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const WomenScreen(),
-                              ),
-                            ),
-                          ),
-                        ),
-                        SliverToBoxAdapter(child: _ExploreBanner(width: width)),
-                        SliverToBoxAdapter(child: _BrandStory(width: width)),
-                        SliverToBoxAdapter(
-                            child: _CategoryShowcase(width: width)),
-                        SliverToBoxAdapter(
-                            child: _HoodiePromoBanner(width: width)),
-                        SliverToBoxAdapter(
-                          child: _BestSellersSection(
-                            width: width,
-                            title: "BEST SELLERS",
-                            items: bestSellers,
-                            onOpen: (p) => _openProduct(context, p),
-                          ),
-                        ),
-                        if (menProducts.isNotEmpty)
-                          SliverToBoxAdapter(
-                            child: _BestSellersSection(
-                              width: width,
-                              title: "MEN'S PICKS",
-                              items: menProducts.take(8).toList(),
-                              onOpen: (p) => _openProduct(context, p),
-                            ),
-                          ),
-                        if (womenProducts.isNotEmpty)
-                          SliverToBoxAdapter(
-                            child: _BestSellersSection(
-                              width: width,
-                              title: "WOMEN'S PICKS",
-                              items: womenProducts.take(8).toList(),
-                              onOpen: (p) => _openProduct(context, p),
-                            ),
-                          ),
-                        SliverToBoxAdapter(child: _NVFooter(width: width)),
-                      ],
-                    ),
-                    _NVNavBar(
-                      solid: _navSolid,
-                      width: width,
-                      onCart: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const CartScreen()),
-                      ),
-                      onMen: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const MenScreen()),
-                      ),
-                      onWomen: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const WomenScreen()),
-                      ),
-                      onHome: () => _scrollController.animateTo(
-                        0,
-                        duration: const Duration(milliseconds: 500),
-                        curve: Curves.easeOut,
-                      ),
-                    ),
-                  ],
-                ),
+  void _scrollToContent() {
+    _scrollController.animateTo(
+      MediaQuery.of(context).size.height * 0.95,
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeInOutCubic,
     );
   }
 
-  static void _openProduct(BuildContext context, ProductModel product) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (_) => ProductDetailScreen(product: product)),
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = NVBreak.isMobile(width);
+
+    return Scaffold(
+      backgroundColor: NVColors.ivory,
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            controller: _scrollController,
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                HeroSection(
+                  scrollOffset: _scrollOffset,
+                  onScrollDownTap: _scrollToContent,
+                ),
+                const MarqueeStrip(),
+                const CollectionsSection(),
+                const BrandStorySection(),
+                const LookbookSection(),
+                const NewsletterSection(),
+                const FooterSection(),
+              ],
+            ),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: GlassNavbar(
+              isMobile: isMobile,
+              scrollOffset: _scrollOffset,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-/// ============================================================
-/// NAVIGATION — permanent rich-black luxury bar with a slim
-/// gold-on-black announcement strip on top (reference-matched).
-/// Business logic (callbacks, scroll-solid state) is unchanged —
-/// only presentation/styling was elevated.
-/// ============================================================
-class _NVNavBar extends StatelessWidget {
-  final bool solid;
-  final double width;
-  final VoidCallback onCart;
-  final VoidCallback onMen;
-  final VoidCallback onWomen;
-  final VoidCallback onHome;
+/// =================================================================
+/// GLASS NAVBAR
+/// =================================================================
+class GlassNavbar extends StatelessWidget {
+  final bool isMobile;
+  final double scrollOffset;
 
-  const _NVNavBar({
-    required this.solid,
-    required this.width,
-    required this.onCart,
-    required this.onMen,
-    required this.onWomen,
-    required this.onHome,
+  const GlassNavbar({
+    super.key,
+    required this.isMobile,
+    required this.scrollOffset,
   });
 
   @override
   Widget build(BuildContext context) {
-    final desktop = NVBreak.isDesktop(width);
+    final width = MediaQuery.of(context).size.width;
+    final isTablet = NVBreak.isTablet(width);
+    final compact = isMobile || isTablet;
+    final scrolledPastHero = scrollOffset > 40;
 
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: solid ? 16 : 0,
-            sigmaY: solid ? 16 : 0,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ---- slim gold-on-black announcement strip ----
-              if (desktop) _NVAnnouncementBar(width: width),
-
-              // ---- main navigation row ----
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                padding: EdgeInsets.symmetric(
-                  horizontal: NVBreak.hPad(width),
-                  vertical: solid ? 14 : 20,
-                ),
-                decoration: BoxDecoration(
-                  color: NVColors.richBlack,
-                  border: const Border(
-                    bottom: BorderSide(
-                      color: Color(0x33D6C08D),
-                      width: 0.6,
-                    ),
-                  ),
-                  boxShadow: solid
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.35),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          ),
-                        ]
-                      : [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.18),
-                            blurRadius: 14,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // ---- logo (shrinks to fit — never overflows) ----
-                    Flexible(
-                      flex: desktop ? 2 : 3,
-                      fit: FlexFit.loose,
-                      child: GestureDetector(
-                        onTap: onHome,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: _NVLogo(desktop: desktop),
-                        ),
-                      ),
-                    ),
-
-                    // ---- centered nav links ----
-                    if (desktop)
-                      Expanded(
-                        flex: 4,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _NavLink("Home", onHome),
-                            _NavLink("Men", onMen),
-                            _NavLink("Women", onWomen),
-                            _NavLink("New Arrivals", () {}),
-                            _NavLink("Collections", () {}),
-                            _NavLink("Best Sellers", () {}),
-                            _NavLink("About", () {}),
-                            _NavLink("Contact", () {}),
-                          ],
-                        ),
-                      ),
-
-                    // ---- right icon cluster ----
-                    Flexible(
-                      flex: desktop ? 2 : 2,
-                      fit: FlexFit.loose,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          if (desktop) ...[
-                            _NavIcon(Icons.search, () => _openSearch(context)),
-                            _NVIconDivider(),
-                            _NavIcon(Icons.favorite_border, () {}),
-                            _NVIconDivider(),
-                          ],
-                          _NavIcon(
-                            Icons.shopping_bag_outlined,
-                            onCart,
-                            compact: !desktop,
-                          ),
-                          if (!desktop)
-                            Builder(
-                              builder: (ctx) => IconButton(
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(
-                                  minWidth: 36,
-                                  minHeight: 36,
-                                ),
-                                onPressed: () => Scaffold.of(ctx).openDrawer(),
-                                icon: const Icon(Icons.menu,
-                                    size: 22, color: NVColors.champagneGold),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  static void _openSearch(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        backgroundColor: NVColors.richBlack,
-        insetPadding:
-            const EdgeInsets.symmetric(horizontal: 40, vertical: 200),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: TextField(
-            autofocus: true,
-            style: const TextStyle(color: NVColors.ivoryWhite),
-            decoration: const InputDecoration(
-              hintText: "Search New Vision's...",
-              hintStyle: TextStyle(color: Colors.white54),
-              prefixIcon: Icon(Icons.search, color: NVColors.champagneGold),
-              border: InputBorder.none,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Slim gold-accented announcement strip that sits above the main
-/// navbar, echoing the reference layout's "Free shipping..." bar.
-class _NVAnnouncementBar extends StatelessWidget {
-  final double width;
-  const _NVAnnouncementBar({required this.width});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: const Color(0xFF050505),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
       padding: EdgeInsets.symmetric(
-        horizontal: NVBreak.hPad(width),
-        vertical: 8,
+        horizontal: isMobile ? 16 : 32,
+        vertical: isMobile ? 14 : 20,
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Flexible(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.local_shipping_outlined,
-                    size: 13, color: NVColors.champagneGold),
-                SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    "FREE SHIPPING ON ALL ORDERS ABOVE ₹999",
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                    style: TextStyle(
-                      color: NVColors.champagneGold,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(100),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 16 : 28,
+              vertical: isMobile ? 10 : 14,
+            ),
+            decoration: BoxDecoration(
+              color: scrolledPastHero
+                  ? NVColors.charcoal.withValues(alpha: 0.35)
+                  : Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(100),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.18),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
-          ),
-          if (width >= 1250) ...[
-            const SizedBox(width: 16),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                _NVTopLinkText("Help"),
-                SizedBox(width: 22),
-                _NVTopLinkText("Track Order"),
-                SizedBox(width: 22),
-                _NVTopLinkText("Returns"),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _Logo(compact: compact),
+                if (!compact) const _NavLinks(),
+                _NavActions(compact: compact),
               ],
             ),
-          ],
-        ],
+          ),
+        ),
       ),
     );
   }
 }
 
-class _NVTopLinkText extends StatelessWidget {
-  final String text;
-  const _NVTopLinkText(this.text);
+class _Logo extends StatelessWidget {
+  final bool compact;
+  const _Logo({required this.compact});
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        color: Colors.white60,
-        fontSize: 10.5,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 0.6,
-      ),
-    );
-  }
-}
-
-/// Elegant serif wordmark used in the navbar.
-class _NVLogo extends StatelessWidget {
-  final bool desktop;
-  const _NVLogo({required this.desktop});
-
-  @override
-  Widget build(BuildContext context) {
-    return RichText(
-      maxLines: 1,
-      softWrap: false,
-      overflow: TextOverflow.visible,
-      text: TextSpan(
-        children: [
-          TextSpan(
-            text: "NEW VISION",
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: NVColors.white, width: 1.2),
+          ),
+          child: const Text(
+            'N',
             style: TextStyle(
-              fontFamily: 'Georgia',
-              color: NVColors.ivoryWhite,
-              fontSize: desktop ? 25 : 19,
+              color: NVColors.white,
               fontWeight: FontWeight.w600,
-              letterSpacing: 3.2,
+              fontSize: 15,
+              height: 1,
             ),
           ),
-          TextSpan(
-            text: "'S",
-            style: TextStyle(
-              fontFamily: 'Georgia',
-              color: NVColors.champagneGold,
-              fontSize: desktop ? 25 : 19,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 3.2,
-            ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          "NV's",
+          style: TextStyle(
+            color: NVColors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: compact ? 18 : 20,
+            letterSpacing: 0.5,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-/// Thin vertical hairline used between navbar icons for a
-/// jewellery-case, boutique feel.
-class _NVIconDivider extends StatelessWidget {
+class _NavLinks extends StatelessWidget {
+  const _NavLinks();
+
+  static const items = ['New Arrivals', 'Collections', 'Brand', 'About','profile'];
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 1,
-      height: 16,
-      margin: const EdgeInsets.symmetric(horizontal: 2),
-      color: Colors.white24,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: items.map((label) => _NavLink(label: label)).toList(),
     );
   }
 }
 
 class _NavLink extends StatefulWidget {
   final String label;
-  final VoidCallback onTap;
-  const _NavLink(this.label, this.onTap);
+  const _NavLink({required this.label});
 
   @override
   State<_NavLink> createState() => _NavLinkState();
 }
 
 class _NavLinkState extends State<_NavLink> {
-  bool _hovered = false;
+  bool _hovering = false;
 
   @override
   Widget build(BuildContext context) {
+    var mouseRegion3 = MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovering = true),
+        onExit: (_) => setState(() => _hovering = false),
+        child: GestureDetector(
+          onTap: () {
+  if (widget.label == 'Collections') {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CollectionsPage(),
+      ),
+    );
+  }
+  if (widget.label == 'New Arrivals') {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const NewArrivalsScreen(),
+      ),
+    );
+  }
+  if (widget.label == 'About') {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AboutScreen(),
+      ),
+    );
+  }
+  if (widget.label == 'Profile') {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AccountPage(),
+      ),
+    );
+  }      
+},
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: _hovering
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : Colors.transparent,
+            ),
+            child: Text(
+              widget.label,
+              style: TextStyle(
+                color: NVColors.white.withValues(alpha: _hovering ? 1 : 0.88),
+                fontSize: 14.5,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.2,
+              ),
+            ),
+          )
+        ),
+      );
+
+  
+    var mouseRegion2 = mouseRegion3;
+    var mouseRegion = mouseRegion2;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: mouseRegion,
+    );
+  }
+}
+
+class _NavActions extends StatefulWidget {
+  final bool compact;
+  const _NavActions({required this.compact});
+
+  @override
+  State<_NavActions> createState() => _NavActionsState();
+}
+
+class _NavActionsState extends State<_NavActions> {
+  bool _searchHover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.compact) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _iconPill(Icons.search_rounded),
+          const SizedBox(width: 8),
+          _iconPill(Icons.menu_rounded, onTap: () => _openMobileMenu(context)),
+        ],
+      );
+    }
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Column(
+      onEnter: (_) => setState(() => _searchHover = true),
+      onExit: (_) => setState(() => _searchHover = false),
+      child: AnimatedScale(
+        scale: _searchHover ? 1.08 : 1.0,
+        duration: const Duration(milliseconds: 180),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: _searchHover ? 0.22 : 0.12),
+            borderRadius: BorderRadius.circular(100),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+          ),
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 200),
+              const Icon(Icons.search_rounded, color: Colors.white, size: 17),
+              const SizedBox(width: 6),
+              const Text(
+                'Search',
                 style: TextStyle(
-                  color:
-                      _hovered ? NVColors.champagneGold : NVColors.ivoryWhite,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.0,
-                  shadows: _hovered
-                      ? [
-                          Shadow(
-                            color: NVColors.champagneGold.withOpacity(0.9),
-                            blurRadius: 10,
-                          ),
-                        ]
-                      : [],
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
-                child: Text(widget.label),
-              ),
-              const SizedBox(height: 5),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                height: 1.2,
-                width: _hovered ? 20 : 0,
-                color: NVColors.champagneGold,
               ),
             ],
           ),
@@ -595,360 +434,85 @@ class _NavLinkState extends State<_NavLink> {
       ),
     );
   }
-}
 
-class _NavIcon extends StatefulWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool compact;
-  const _NavIcon(this.icon, this.onTap, {this.compact = false});
-
-  @override
-  State<_NavIcon> createState() => _NavIconState();
-}
-
-class _NavIconState extends State<_NavIcon> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: IconButton(
-        onPressed: widget.onTap,
-        padding: widget.compact ? EdgeInsets.zero : null,
-        constraints: widget.compact
-            ? const BoxConstraints(minWidth: 36, minHeight: 36)
-            : null,
-        iconSize: widget.compact ? 22 : 24,
-        icon: Icon(
-          widget.icon,
-          color: _hovered ? NVColors.ivoryWhite : NVColors.champagneGold,
+  Widget _iconPill(IconData icon, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap ?? () {},
+      customBorder: const CircleBorder(),
+      child: Container(
+        width: 38,
+        height: 38,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withValues(alpha: 0.14),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
         ),
+        child: Icon(icon, color: Colors.white, size: 18),
       ),
+    );
+  }
+
+  void _openMobileMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => const _MobileMenuSheet(),
     );
   }
 }
 
-class _NVDrawer extends StatelessWidget {
-  const _NVDrawer();
+class _MobileMenuSheet extends StatelessWidget {
+  const _MobileMenuSheet();
 
-  @override
-  Widget build(BuildContext context) {
-    return Drawer(
-      backgroundColor: NVColors.richBlack,
-      child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Text(
-                "NEW VISION'S",
-                style: TextStyle(
-                  color: NVColors.champagneGold,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.4,
-                ),
-              ),
-            ),
-            const Divider(color: Colors.white24),
-            for (final item in [
-              "Home",
-              "Men",
-              "Women",
-              "New Arrivals",
-              "Collections",
-              "Best Sellers",
-              "About",
-              "Contact",
-            ])
-              ListTile(
-                title: Text(item,
-                    style: const TextStyle(color: NVColors.ivoryWhite)),
-                onTap: () => Navigator.pop(context),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// ============================================================
-/// HERO — full-screen auto-playing cinematic carousel
-/// ============================================================
-class _HeroCarousel extends StatefulWidget {
-  final double width;
-  const _HeroCarousel({required this.width});
-
-  @override
-  State<_HeroCarousel> createState() => _HeroCarouselState();
-}
-
-class _HeroCarouselState extends State<_HeroCarousel> {
-  int _index = 0;
-  Timer? _timer;
-
-  final _headlines = [
-    ("THE 2026 EDIT", "Own Every Room\nYou Walk Into"),
-    ("STREET MEETS LUXURY", "Comfort Cut\nWith Confidence"),
-    ("LIMITED DROP", "Wear What\nCan't Be Copied"),
+  static const items = [
+    'New Arrivals',
+    'Collections',
+    'Brand',
+    'About',
+    'profile'
+    'Search',
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
-      setState(() => _index = (_index + 1) % NVImages.heroSlides.length);
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final desktop = NVBreak.isDesktop(widget.width);
-    final height = MediaQuery.of(context).size.height;
-    final headline = _headlines[_index % _headlines.length];
-
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 900),
-            transitionBuilder: (child, anim) => FadeTransition(
-              opacity: anim,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0.04, 0),
-                  end: Offset.zero,
-                ).animate(anim),
-                child: child,
-              ),
-            ),
-            child: Image.network(
-              NVImages.heroSlides[_index],
-              key: ValueKey(_index),
-              fit: BoxFit.cover,
-            ),
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+          decoration: BoxDecoration(
+            color: NVColors.charcoal.withValues(alpha: 0.92),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withOpacity(0.35),
-                  Colors.black.withOpacity(0.05),
-                  NVColors.richBlack.withOpacity(0.85),
-                ],
-                stops: const [0.0, 0.45, 1.0],
-              ),
-            ),
-          ),
-          Positioned(
-            left: NVBreak.hPad(widget.width),
-            right: NVBreak.hPad(widget.width),
-            bottom: desktop ? 90 : 60,
-            child: _FadeSlideIn(
-              key: ValueKey('headline-$_index'),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(26),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: Container(
-                    constraints: BoxConstraints(
-                      maxWidth: desktop ? 560 : double.infinity,
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 28,
-                      vertical: 26,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.10),
-                      borderRadius: BorderRadius.circular(26),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.25),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          headline.$1,
-                          style: const TextStyle(
-                            color: NVColors.warmGold,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 3,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          headline.$2,
-                          style: TextStyle(
-                            fontFamily: 'Georgia',
-                            color: Colors.white,
-                            fontSize: desktop ? 42 : 30,
-                            height: 1.12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Wrap(
-                          spacing: 14,
-                          runSpacing: 12,
-                          children: [
-                            _NVButton(
-                              label: "EXPLORE COLLECTION",
-                              filled: true,
-                              onTap: () {},
-                            ),
-                            _NVButton(
-                              label: "SHOP NOW",
-                              filled: false,
-                              onTap: () {},
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 24,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(NVImages.heroSlides.length, (i) {
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: _index == i ? 26 : 8,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    color: _index == i
-                        ? NVColors.champagneGold
-                        : Colors.white54,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                );
-              }),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// ============================================================
-/// MEN'S EDITORIAL SECTION — full-bleed overlay layout
-/// ============================================================
-class _MenSection extends StatefulWidget {
-  final double width;
-  final VoidCallback onShopMen;
-  const _MenSection({required this.width, required this.onShopMen});
-
-  @override
-  State<_MenSection> createState() => _MenSectionState();
-}
-
-class _MenSectionState extends State<_MenSection> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final desktop = NVBreak.isDesktop(widget.width);
-    return _FadeSlideIn(
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: SizedBox(
-          height: desktop ? 620 : 460,
-          width: double.infinity,
-          child: Stack(
-            fit: StackFit.expand,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              AnimatedScale(
-                scale: _hovered ? 1.05 : 1.0,
-                duration: const Duration(milliseconds: 500),
-                child: Image.network(NVImages.menBanner, fit: BoxFit.cover),
-              ),
-              DecoratedBox(
+              Container(
+                width: 44,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [
-                      NVColors.richBlack.withOpacity(0.85),
-                      Colors.transparent,
-                    ],
-                    stops: const [0.0, 0.65],
+                  color: Colors.white.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              ...items.map(
+                (label) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      color: NVColors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ),
-              Positioned(
-                left: NVBreak.hPad(widget.width),
-                right: NVBreak.hPad(widget.width),
-                bottom: 44,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "THE MEN'S EDIT",
-                      style: TextStyle(
-                        color: NVColors.warmGold,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 3,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      "Tailored Ease.\nUnapologetic Attitude.",
-                      style: TextStyle(
-                        fontFamily: 'Georgia',
-                        color: Colors.white,
-                        fontSize: desktop ? 38 : 26,
-                        fontWeight: FontWeight.w700,
-                        height: 1.15,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 460),
-                      child: const Text(
-                        "Oversized silhouettes, premium fabrics, and a fit "
-                        "built for the way you actually move through your day.",
-                        style: TextStyle(
-                            color: Colors.white70, fontSize: 14, height: 1.5),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    _NVButton(
-                      label: "SHOP MEN",
-                      filled: true,
-                      onTap: widget.onShopMen,
-                    ),
-                  ],
-                ),
-              ),
+              const SizedBox(height: 8),
             ],
           ),
         ),
@@ -957,497 +521,118 @@ class _MenSectionState extends State<_MenSection> {
   }
 }
 
-/// ============================================================
-/// WOMEN'S EDITORIAL SECTION — split panel layout (distinct
-/// composition so it never repeats the Men's section pattern)
-/// ============================================================
-class _WomenSection extends StatelessWidget {
-  final double width;
-  final VoidCallback onShopWomen;
-  const _WomenSection({required this.width, required this.onShopWomen});
+/// =================================================================
+/// PREMIUM BUTTON — hover scale + press feedback CTA
+/// =================================================================
+enum ButtonVariant { solid, outline }
 
-  @override
-  Widget build(BuildContext context) {
-    final desktop = NVBreak.isDesktop(width);
-    final textPanel = Container(
-      color: NVColors.sectionBeige,
-      padding: EdgeInsets.symmetric(
-        horizontal: NVBreak.hPad(width),
-        vertical: desktop ? 0 : 44,
-      ),
-      alignment: Alignment.centerLeft,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            "THE WOMEN'S EDIT",
-            style: TextStyle(
-              color: NVColors.warmGold,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 3,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            "Soft Power.\nSharp Silhouettes.",
-            style: TextStyle(
-              fontFamily: 'Georgia',
-              color: NVColors.richBlack,
-              fontSize: desktop ? 38 : 26,
-              fontWeight: FontWeight.w700,
-              height: 1.15,
-            ),
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            "Fluid tailoring and elevated basics designed to move between "
-            "boardroom, brunch, and everything after dark.",
-            style: TextStyle(
-                color: NVColors.graphite, fontSize: 14, height: 1.6),
-          ),
-          const SizedBox(height: 22),
-          _NVButton(label: "SHOP WOMEN", filled: false, onTap: onShopWomen),
-        ],
-      ),
-    );
-
-    final imagePanel = _HoverScale(
-      scale: 1.03,
-      child: SizedBox(
-        height: desktop ? 560 : 420,
-        width: double.infinity,
-        child: Image.network(NVImages.womenBanner, fit: BoxFit.cover),
-      ),
-    );
-
-    return _FadeSlideIn(
-      child: desktop
-          ? SizedBox(
-              height: 560,
-              child: Row(
-                children: [
-                  Expanded(child: imagePanel),
-                  Expanded(child: textPanel),
-                ],
-              ),
-            )
-          : Column(
-              children: [imagePanel, textPanel],
-            ),
-    );
-  }
-}
-
-/// ============================================================
-/// EXPLORE — cinematic banner with subtle looping gradient glow
-/// ============================================================
-class _ExploreBanner extends StatefulWidget {
-  final double width;
-  const _ExploreBanner({required this.width});
-
-  @override
-  State<_ExploreBanner> createState() => _ExploreBannerState();
-}
-
-class _ExploreBannerState extends State<_ExploreBanner>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _glow;
-
-  @override
-  void initState() {
-    super.initState();
-    _glow = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _glow.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final desktop = NVBreak.isDesktop(widget.width);
-    return _FadeSlideIn(
-      child: Container(
-        margin: EdgeInsets.fromLTRB(
-          NVBreak.hPad(widget.width),
-          56,
-          NVBreak.hPad(widget.width),
-          0,
-        ),
-        height: desktop ? 340 : 260,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          image: DecorationImage(
-            image: const NetworkImage(NVImages.exploreBanner),
-            fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(
-              NVColors.richBlack.withOpacity(0.5),
-              BlendMode.darken,
-            ),
-          ),
-        ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            AnimatedBuilder(
-              animation: _glow,
-              builder: (context, _) => DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.center,
-                    radius: 1.1,
-                    colors: [
-                      NVColors.champagneGold
-                          .withOpacity(0.10 + _glow.value * 0.12),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    "EXPLORE THE NEW COLLECTION",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  _NVButton(label: "SHOP NOW", filled: true, onTap: () {}),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// ============================================================
-/// BRAND STORY
-/// ============================================================
-class _BrandStory extends StatelessWidget {
-  final double width;
-  const _BrandStory({required this.width});
-
-  @override
-  Widget build(BuildContext context) {
-    final desktop = NVBreak.isDesktop(width);
-    final pillars = [
-      (Icons.diamond_outlined, "Premium Quality"),
-      (Icons.eco_outlined, "Sustainable Craft"),
-      (Icons.bolt_outlined, "Individuality"),
-      (Icons.spa_outlined, "All-Day Comfort"),
-      (Icons.timelapse_outlined, "Timeless Design"),
-    ];
-
-    return _FadeSlideIn(
-      child: Container(
-        width: double.infinity,
-        color: NVColors.sectionBeige,
-        padding: EdgeInsets.symmetric(
-          horizontal: NVBreak.hPad(width),
-          vertical: 64,
-        ),
-        child: Column(
-          children: [
-            const Text(
-              "WHY NEW VISION'S",
-              style: TextStyle(
-                color: NVColors.warmGold,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 3,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: desktop ? 780 : 600),
-              child: const Text(
-                "New Vision's isn't built on trends — it's built on craft. "
-                "Every piece is small-batch made with premium fabrics that "
-                "hold their shape and their story. We design for confidence, "
-                "not conformity, so what you wear feels as individual as you "
-                "are. This is timeless fashion, cut for a generation that "
-                "leads the culture instead of chasing it.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: NVColors.graphite,
-                  fontSize: 15.5,
-                  height: 1.7,
-                ),
-              ),
-            ),
-            const SizedBox(height: 34),
-            Wrap(
-              spacing: 28,
-              runSpacing: 20,
-              alignment: WrapAlignment.center,
-              children: pillars
-                  .map(
-                    (p) => Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(p.$1, color: NVColors.warmGold, size: 26),
-                        const SizedBox(height: 8),
-                        Text(
-                          p.$2,
-                          style: const TextStyle(
-                            color: NVColors.richBlack,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// ============================================================
-/// CATEGORY SHOWCASE
-/// ============================================================
-class _CategoryShowcase extends StatelessWidget {
-  final double width;
-  const _CategoryShowcase({required this.width});
-
-  @override
-  Widget build(BuildContext context) {
-    final entries = NVImages.categories.entries.toList();
-    final cols = NVBreak.gridColumns(width);
-
-    return _FadeSlideIn(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          NVBreak.hPad(width),
-          64,
-          NVBreak.hPad(width),
-          0,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const _SectionHeading("SHOP BY CATEGORY"),
-            const SizedBox(height: 24),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: entries.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: cols,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 0.72,
-              ),
-              itemBuilder: (context, i) {
-                return _CategoryCard(
-                  name: entries[i].key,
-                  image: entries[i].value,
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CategoryCard extends StatefulWidget {
-  final String name;
-  final String image;
-  const _CategoryCard({required this.name, required this.image});
-
-  @override
-  State<_CategoryCard> createState() => _CategoryCardState();
-}
-
-class _CategoryCardState extends State<_CategoryCard> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedScale(
-        scale: _hovered ? 1.03 : 1.0,
-        duration: const Duration(milliseconds: 220),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              AnimatedScale(
-                scale: _hovered ? 1.12 : 1.0,
-                duration: const Duration(milliseconds: 400),
-                child: Image.network(widget.image, fit: BoxFit.cover),
-              ),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [
-                      NVColors.richBlack.withOpacity(_hovered ? 0.75 : 0.45),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-              if (_hovered)
-                Positioned.fill(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-                    child: Container(color: Colors.transparent),
-                  ),
-                ),
-              Positioned(
-                left: 14,
-                right: 14,
-                bottom: 14,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      widget.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    AnimatedOpacity(
-                      opacity: _hovered ? 1 : 0,
-                      duration: const Duration(milliseconds: 200),
-                      child: const Padding(
-                        padding: EdgeInsets.only(top: 4),
-                        child: Text(
-                          "Shop Now →",
-                          style: TextStyle(
-                            color: NVColors.warmGold,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// ============================================================
-/// HOODIE PROMO BANNER — "Discover What's New"
-/// ============================================================
-class _HoodiePromoBanner extends StatelessWidget {
-  final double width;
-  const _HoodiePromoBanner({required this.width});
-
-  @override
-  Widget build(BuildContext context) {
-    final desktop = NVBreak.isDesktop(width);
-    return _FadeSlideIn(
-      child: Container(
-        margin: EdgeInsets.fromLTRB(
-            NVBreak.hPad(width), 64, NVBreak.hPad(width), 0),
-        height: desktop ? 520 : 440,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(28)),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.network(NVImages.hoodiePromo, fit: BoxFit.cover),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    NVColors.richBlack.withOpacity(0.85),
-                  ],
-                  stops: const [0.35, 1.0],
-                ),
-              ),
-            ),
-            Positioned(
-              left: 28,
-              right: 28,
-              bottom: 34,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "DISCOVER WHAT'S NEW",
-                    style: TextStyle(
-                      fontFamily: 'Georgia',
-                      color: Colors.white,
-                      fontSize: desktop ? 30 : 24,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const _PulsingButton(label: "EXPLORE"),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PulsingButton extends StatefulWidget {
+class PremiumButton extends StatefulWidget {
   final String label;
-  const _PulsingButton({required this.label});
+  final ButtonVariant variant;
+  final VoidCallback onTap;
+  final bool small;
+
+  const PremiumButton({
+    super.key,
+    required this.label,
+    required this.variant,
+    required this.onTap,
+    this.small = false,
+  });
 
   @override
-  State<_PulsingButton> createState() => _PulsingButtonState();
+  State<PremiumButton> createState() => _PremiumButtonState();
 }
 
-class _PulsingButtonState extends State<_PulsingButton>
+class _PremiumButtonState extends State<PremiumButton> {
+  bool _hover = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isSolid = widget.variant == ButtonVariant.solid;
+
+    final bgColor = isSolid
+        ? Colors.white
+        : (_hover ? Colors.white.withValues(alpha: 0.12) : Colors.transparent);
+    final textColor = isSolid ? Colors.black : Colors.white;
+    final borderColor = isSolid ? Colors.transparent : Colors.white;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _pressed ? 0.96 : (_hover ? 1.045 : 1.0),
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOut,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            padding: EdgeInsets.symmetric(
+              horizontal: widget.small ? 26 : 34,
+              vertical: widget.small ? 14 : 18,
+            ),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(100),
+              border: Border.all(color: borderColor, width: 1.4),
+              boxShadow: isSolid && _hover
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Text(
+              widget.label,
+              style: TextStyle(
+                color: textColor,
+                fontSize: widget.small ? 13.5 : 15,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.4,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// =================================================================
+/// SCROLL DOWN INDICATOR
+/// =================================================================
+class ScrollIndicator extends StatefulWidget {
+  final VoidCallback onTap;
+  const ScrollIndicator({super.key, required this.onTap});
+
+  @override
+  State<ScrollIndicator> createState() => _ScrollIndicatorState();
+}
+
+class _ScrollIndicatorState extends State<ScrollIndicator>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  late final Animation<double> _float;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
+    _float = Tween<double>(begin: 0, end: 8).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -1458,65 +643,53 @@ class _PulsingButtonState extends State<_PulsingButton>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final scale = 1.0 + (_controller.value * 0.04);
-        return Transform.scale(scale: scale, child: child);
-      },
-      child: _NVButton(label: widget.label, filled: true, onTap: () {}),
-    );
-  }
-}
-
-/// ============================================================
-/// PRODUCT GRID SECTION — used for Best Sellers / Men's / Women's picks
-/// (reads directly from ProductController results — logic unchanged)
-/// ============================================================
-class _BestSellersSection extends StatelessWidget {
-  final double width;
-  final String title;
-  final List<ProductModel> items;
-  final void Function(ProductModel) onOpen;
-
-  const _BestSellersSection({
-    required this.width,
-    required this.title,
-    required this.items,
-    required this.onOpen,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (items.isEmpty) return const SizedBox.shrink();
-    final cols = NVBreak.gridColumns(width);
-
-    return _FadeSlideIn(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          NVBreak.hPad(width),
-          64,
-          NVBreak.hPad(width),
-          0,
-        ),
+    return GestureDetector(
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            _SectionHeading(title),
-            const SizedBox(height: 24),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: items.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: cols,
-                mainAxisSpacing: 20,
-                crossAxisSpacing: 20,
-                childAspectRatio: 0.62,
+            Text(
+              'SCROLL DOWN',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.85),
+                fontSize: 11,
+                letterSpacing: 3,
+                fontWeight: FontWeight.w500,
               ),
-              itemBuilder: (context, i) => _ProductCard(
-                product: items[i],
-                onTap: () => onOpen(items[i]),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: 26,
+              height: 42,
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  width: 1.4,
+                ),
+              ),
+              child: AnimatedBuilder(
+                animation: _float,
+                builder: (context, child) {
+                  return Align(
+                    alignment: Alignment.topCenter,
+                    child: Transform.translate(
+                      offset: Offset(0, _float.value),
+                      child: Container(
+                        width: 4,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -1526,167 +699,726 @@ class _BestSellersSection extends StatelessWidget {
   }
 }
 
-class _ProductCard extends StatefulWidget {
-  final ProductModel product;
-  final VoidCallback onTap;
-  const _ProductCard({required this.product, required this.onTap});
+/// =================================================================
+/// HERO SECTION — 100vh cinematic hero with parallax + fade-in
+/// =================================================================
+class HeroSection extends StatefulWidget {
+  final double scrollOffset;
+  final VoidCallback onScrollDownTap;
+
+  const HeroSection({
+    super.key,
+    required this.scrollOffset,
+    required this.onScrollDownTap,
+  });
 
   @override
-  State<_ProductCard> createState() => _ProductCardState();
+  State<HeroSection> createState() => _HeroSectionState();
 }
 
-class _ProductCardState extends State<_ProductCard> {
-  bool _hovered = false;
-  bool _favorite = false;
+class _HeroSectionState extends State<HeroSection>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _entrance;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+
+  // High-resolution cinematic lifestyle photography: urban golden-hour
+  // street style. Replace with your own campaign photography for launch.
+  static const _heroImageUrl =
+      'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2400&auto=format&fit=crop';
+
+  @override
+  void initState() {
+    super.initState();
+    _entrance = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+    _fade = CurvedAnimation(parent: _entrance, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.12),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _entrance, curve: Curves.easeOutCubic));
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _entrance.forward());
+  }
+
+  @override
+  void dispose() {
+    _entrance.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final product = widget.product;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          transform: Matrix4.translationValues(0, _hovered ? -6 : 0, 0),
-          decoration: BoxDecoration(
-            color: NVColors.cardWhite,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: NVColors.cardBorderBeige,
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color:
-                    NVColors.richBlack.withOpacity(_hovered ? 0.18 : 0.08),
-                blurRadius: _hovered ? 26 : 14,
-                offset: const Offset(0, 10),
+    final size = MediaQuery.of(context).size;
+    final width = size.width;
+    final isMobile = NVBreak.isMobile(width);
+    final isTablet = NVBreak.isTablet(width);
+
+    final parallaxShift = (widget.scrollOffset * 0.35).clamp(0.0, 120.0);
+
+    final headlineSize = isMobile ? 34.0 : (isTablet ? 52.0 : 72.0);
+    final subtitleSize = isMobile ? 15.0 : 18.0;
+
+    return SizedBox(
+      height: size.height,
+      width: double.infinity,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Transform.translate(
+            offset: Offset(0, -parallaxShift),
+            child: SizedBox(
+              height: size.height + 140,
+              width: double.infinity,
+              child: Image.network(
+                _heroImageUrl,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return Container(color: NVColors.charcoal);
+                },
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: NVColors.charcoal,
+                  child: const Icon(Icons.image_not_supported,
+                      color: Colors.white24, size: 40),
+                ),
               ),
-            ],
+            ),
           ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    AnimatedScale(
-                      scale: _hovered ? 1.06 : 1.0,
-                      duration: const Duration(milliseconds: 300),
-                      child: product.images.isNotEmpty
-                          ? Image.network(product.images.first,
-                              fit: BoxFit.cover)
-                          : Container(
-                              color: NVColors.ivoryWhite,
-                              child: const Icon(Icons.image_outlined,
-                                  color: NVColors.graphite),
-                            ),
-                    ),
-                    Positioned(
-                      top: 10,
-                      left: 10,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: NVColors.richBlack.withOpacity(0.55),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Text(
-                              "NEW",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1,
-                              ),
-                            ),
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.55),
+                  Colors.black.withValues(alpha: 0.30),
+                  Colors.black.withValues(alpha: 0.65),
+                ],
+                stops: const [0.0, 0.5, 1.0],
+              ),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.center,
+                radius: 1.2,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.35),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 22 : 40,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                FadeTransition(
+                  opacity: _fade,
+                  child: SlideTransition(
+                    position: _slide,
+                    child: Column(
+                      children: [
+                        Text(
+                          'NV\u2019S \u2014 SIGNATURE COLLECTION',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: NVColors.gold,
+                            fontSize: isMobile ? 11 : 13,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: isMobile ? 3 : 4,
                           ),
                         ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: GestureDetector(
-                        onTap: () => setState(() => _favorite = !_favorite),
-                        child: CircleAvatar(
-                          radius: 15,
-                          backgroundColor: Colors.white.withOpacity(0.85),
-                          child: Icon(
-                            _favorite ? Icons.favorite : Icons.favorite_border,
-                            size: 15,
-                            color: _favorite
-                                ? NVColors.warmGold
-                                : NVColors.graphite,
+                        SizedBox(height: isMobile ? 18 : 26),
+                        Text(
+                          "WE DON'T FOLLOW\nTRENDS. WE CREATE THEM.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: headlineSize,
+                            fontWeight: FontWeight.w600,
+                            height: 1.12,
+                            letterSpacing: isMobile ? 0 : -0.5,
                           ),
                         ),
-                      ),
-                    ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: AnimatedSlide(
-                        offset: _hovered ? Offset.zero : const Offset(0, 1),
-                        duration: const Duration(milliseconds: 220),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          color: NVColors.richBlack.withOpacity(0.85),
-                          alignment: Alignment.center,
-                          child: const Text(
-                            "QUICK VIEW",
-                            style: TextStyle(
-                              color: NVColors.ivoryWhite,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.2,
+                        SizedBox(height: isMobile ? 16 : 22),
+                        Text(
+                          'Luxury starts with confidence.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: subtitleSize,
+                            fontWeight: FontWeight.w400,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                        SizedBox(height: isMobile ? 34 : 46),
+                        Wrap(
+                          spacing: 16,
+                          runSpacing: 16,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            PremiumButton(
+                              label: 'Explore Collection',
+                              variant: ButtonVariant.solid,
+                              small: isMobile,
+                              onTap: widget.onScrollDownTap,
                             ),
-                          ),
+                            PremiumButton(
+                              label: 'Shop Now',
+                              variant: ButtonVariant.outline,
+                              small: isMobile,
+                              onTap: () {},
+                            ),
+                          ],
                         ),
-                      ),
+                      ],
                     ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            bottom: isMobile ? 26 : 40,
+            left: 0,
+            right: 0,
+            child: FadeTransition(
+              opacity: _fade,
+              child: Center(
+                child: ScrollIndicator(onTap: widget.onScrollDownTap),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// =================================================================
+/// MARQUEE STRIP — auto-scrolling brand ticker
+/// =================================================================
+class MarqueeStrip extends StatefulWidget {
+  const MarqueeStrip({super.key});
+
+  @override
+  State<MarqueeStrip> createState() => _MarqueeStripState();
+}
+
+class _MarqueeStripState extends State<MarqueeStrip>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  final ScrollController _scrollController = ScrollController();
+
+  static const _items = [
+    'CRAFTED WITH PRECISION',
+    'LIMITED EDITION DROPS',
+    'DESIGNED FOR CONFIDENCE',
+    'GLOBAL LUXURY STANDARD',
+    'TIMELESS SILHOUETTES',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 18),
+    )..addListener(_tick);
+    _controller.repeat();
+  }
+
+  void _tick() {
+    if (!_scrollController.hasClients) return;
+    final max = _scrollController.position.maxScrollExtent;
+    final target = _controller.value * max;
+    _scrollController.jumpTo(target);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final line = List.generate(
+      3,
+      (_) => _items.join('   \u2726   '),
+    ).join('   \u2726   ');
+
+    return Container(
+      color: NVColors.charcoal,
+      padding: const EdgeInsets.symmetric(vertical: 18),
+      child: SizedBox(
+        height: 20,
+        child: ListView(
+          controller: _scrollController,
+          scrollDirection: Axis.horizontal,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            Text(
+              '   $line   $line   ',
+              style: TextStyle(
+                color: NVColors.beige.withValues(alpha: 0.8),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// =================================================================
+/// COLLECTIONS SECTION — responsive grid with hover-zoom cards
+/// =================================================================
+class _CollectionItem {
+  final String title;
+  final String subtitle;
+  final String image;
+  const _CollectionItem(this.title, this.subtitle, this.image);
+}
+
+const _collections = [
+  _CollectionItem(
+    'Womenswear',
+    'Tailored elegance',
+    'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1200&auto=format&fit=crop',
+  ),
+  _CollectionItem(
+    'Menswear',
+    'Modern power dressing',
+    'https://images.unsplash.com/photo-1516257984-b1b4d707412e?q=80&w=1200&auto=format&fit=crop',
+  ),
+  _CollectionItem(
+    'Accessories',
+    'Details that define you',
+    'https://images.unsplash.com/photo-1523293182086-7651a899d37f?q=80&w=1200&auto=format&fit=crop',
+  ),
+  _CollectionItem(
+    'New Season',
+    'Autumn / Winter drop',
+    'https://images.unsplash.com/photo-1503341504253-dff4815485f1?q=80&w=1200&auto=format&fit=crop',
+  ),
+];
+
+class CollectionsSection extends StatelessWidget {
+  const CollectionsSection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = NVBreak.isMobile(width);
+    final isTablet = NVBreak.isTablet(width);
+    final columns = isMobile ? 1 : (isTablet ? 2 : 4);
+
+    return Container(
+      color: NVColors.ivory,
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 20 : 48,
+        vertical: isMobile ? 56 : 90,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            'CURATED COLLECTIONS',
+            style: TextStyle(
+              color: NVColors.gold,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 3,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Shop by category',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: NVColors.charcoal,
+              fontSize: isMobile ? 26 : 38,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: isMobile ? 36 : 54),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _collections.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              mainAxisSpacing: 20,
+              crossAxisSpacing: 20,
+              childAspectRatio: isMobile ? 1.15 : 0.78,
+            ),
+            itemBuilder: (context, i) => _CollectionCard(item: _collections[i]),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CollectionCard extends StatefulWidget {
+  final _CollectionItem item;
+  const _CollectionCard({required this.item});
+
+  @override
+  State<_CollectionCard> createState() => _CollectionCardState();
+}
+
+class _CollectionCardState extends State<_CollectionCard> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            AnimatedScale(
+              scale: _hover ? 1.08 : 1.0,
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeOut,
+              child: Image.network(
+                widget.item.image,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return Container(color: NVColors.beige);
+                },
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: NVColors.beige,
+                  child: const Icon(Icons.image_outlined,
+                      color: Colors.white70),
+                ),
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: _hover ? 0.75 : 0.55),
                   ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            ),
+            Positioned(
+              left: 18,
+              right: 18,
+              bottom: 20,
+              child: AnimatedSlide(
+                offset: _hover ? const Offset(0, -0.04) : Offset.zero,
+                duration: const Duration(milliseconds: 300),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      product.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      widget.item.title,
                       style: const TextStyle(
-                        fontSize: 13,
+                        color: Colors.white,
+                        fontSize: 20,
                         fontWeight: FontWeight.w600,
-                        color: NVColors.richBlack,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "₹${product.price}",
-                      style: const TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w800,
-                        color: NVColors.richBlack,
+                      widget.item.subtitle,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 13,
                       ),
+                    ),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: const EdgeInsets.only(top: 10),
+                      height: _hover ? 1.4 : 0,
+                      width: 34,
+                      color: NVColors.gold,
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// =================================================================
+/// BRAND STORY SECTION — editorial split image/text
+/// =================================================================
+class BrandStorySection extends StatelessWidget {
+  const BrandStorySection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = NVBreak.isMobile(width);
+    final isTablet = NVBreak.isTablet(width);
+    final stacked = isMobile || isTablet;
+
+    final image = ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: AspectRatio(
+        aspectRatio: stacked ? 16 / 10 : 4 / 5,
+        child: Image.network(
+          'https://images.unsplash.com/photo-1520975954732-35dd22299614?q=80&w=1400&auto=format&fit=crop',
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return Container(color: NVColors.beige);
+          },
+          errorBuilder: (context, error, stackTrace) =>
+              Container(color: NVColors.beige),
+        ),
+      ),
+    );
+
+    final text = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'THE NV\u2019S PHILOSOPHY',
+          style: TextStyle(
+            color: NVColors.gold,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 3,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Confidence is\nthe ultimate accessory.',
+          style: TextStyle(
+            color: NVColors.charcoal,
+            fontSize: isMobile ? 28 : 40,
+            fontWeight: FontWeight.w600,
+            height: 1.2,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'Every NV\u2019S piece is designed at the intersection of '
+          'architecture and attitude \u2014 engineered fabrics, considered '
+          'silhouettes, and a refusal to blend in. We don\u2019t chase '
+          'seasons; we set the pace for them.',
+          style: TextStyle(
+            color: NVColors.charcoal.withValues(alpha: 0.7),
+            fontSize: 15.5,
+            height: 1.7,
+          ),
+        ),
+        const SizedBox(height: 30),
+        Row(
+          children: [
+            _StatBlock(value: '120+', label: 'Countries shipped'),
+            const SizedBox(width: 36),
+            _StatBlock(value: '18Y', label: 'Of craftsmanship'),
+          ],
+        ),
+        const SizedBox(height: 34),
+        PremiumButton(
+          label: 'Our Story',
+          variant: ButtonVariant.solid,
+          onTap: () {},
+        ),
+      ],
+    );
+
+    return Container(
+      width: double.infinity,
+      color: NVColors.beige.withValues(alpha: 0.4),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 20 : 48,
+        vertical: isMobile ? 56 : 100,
+      ),
+      child: stacked
+          ? Column(
+              children: [
+                image,
+                const SizedBox(height: 36),
+                text,
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(child: image),
+                const SizedBox(width: 64),
+                Expanded(child: text),
+              ],
+            ),
+    );
+  }
+}
+
+class _StatBlock extends StatelessWidget {
+  final String value;
+  final String label;
+  const _StatBlock({required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: NVColors.charcoal,
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: NVColors.charcoal.withValues(alpha: 0.6),
+            fontSize: 12.5,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// =================================================================
+/// LOOKBOOK SECTION — horizontal-scroll dark gallery
+/// =================================================================
+const _lookImages = [
+  'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?q=80&w=1000&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1490114538077-0a7f8cb49891?q=80&w=1000&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1000&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=1000&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1552374196-c4e7ffc6e126?q=80&w=1000&auto=format&fit=crop',
+];
+
+class LookbookSection extends StatelessWidget {
+  const LookbookSection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = NVBreak.isMobile(width);
+    final cardWidth = isMobile ? width * 0.72 : 320.0;
+
+    return Container(
+      width: double.infinity,
+      color: NVColors.charcoal,
+      padding: EdgeInsets.symmetric(vertical: isMobile ? 56 : 90),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: isMobile ? 20 : 48),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'THE LOOKBOOK',
+                  style: TextStyle(
+                    color: NVColors.gold,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 3,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Street-cast. City-lit.',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isMobile ? 26 : 38,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: isMobile ? 30 : 44),
+          SizedBox(
+            height: isMobile ? 420 : 460,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 20 : 48),
+              itemCount: _lookImages.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 18),
+              itemBuilder: (context, i) {
+                return _LookCard(imageUrl: _lookImages[i], width: cardWidth);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LookCard extends StatefulWidget {
+  final String imageUrl;
+  final double width;
+  const _LookCard({required this.imageUrl, required this.width});
+
+  @override
+  State<_LookCard> createState() => _LookCardState();
+}
+
+class _LookCardState extends State<_LookCard> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        width: widget.width,
+        transform: Matrix4.translationValues(0, _hover ? -8 : 0, 0),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Image.network(
+            widget.imageUrl,
+            fit: BoxFit.cover,
+            height: double.infinity,
+            width: double.infinity,
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return Container(color: Colors.white.withValues(alpha: 0.06));
+            },
+            errorBuilder: (context, error, stackTrace) => Container(
+              color: Colors.white.withValues(alpha: 0.06),
+              child: const Icon(Icons.image_outlined, color: Colors.white24),
+            ),
           ),
         ),
       ),
@@ -1694,221 +1426,371 @@ class _ProductCardState extends State<_ProductCard> {
   }
 }
 
-/// ============================================================
-/// FOOTER — logo, newsletter, links, social, contact
-/// ============================================================
-class _NVFooter extends StatefulWidget {
-  final double width;
-  const _NVFooter({required this.width});
+/// =================================================================
+/// NEWSLETTER SECTION — email capture band
+/// =================================================================
+class NewsletterSection extends StatefulWidget {
+  const NewsletterSection({super.key});
 
   @override
-  State<_NVFooter> createState() => _NVFooterState();
+  State<NewsletterSection> createState() => _NewsletterSectionState();
 }
 
-class _NVFooterState extends State<_NVFooter> {
-  final TextEditingController _emailController = TextEditingController();
+class _NewsletterSectionState extends State<NewsletterSection> {
+  final TextEditingController _controller = TextEditingController();
+  bool _submitted = false;
+  bool _hover = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final desktop = NVBreak.isDesktop(widget.width);
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = NVBreak.isMobile(width);
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(top: 64),
-      color: NVColors.richBlack,
-      padding: EdgeInsets.fromLTRB(
-        NVBreak.hPad(widget.width),
-        56,
-        NVBreak.hPad(widget.width),
-        28,
+      color: NVColors.ivory,
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 24 : 48,
+        vertical: isMobile ? 60 : 90,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Newsletter
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: NVColors.graphite,
-              borderRadius: BorderRadius.circular(20),
+          Text(
+            'JOIN THE INNER CIRCLE',
+            style: TextStyle(
+              color: NVColors.gold,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 3,
             ),
-            child: Flex(
-              direction: desktop ? Axis.horizontal : Axis.vertical,
-              crossAxisAlignment: desktop
-                  ? CrossAxisAlignment.center
-                  : CrossAxisAlignment.start,
-              children: [
-                const Expanded(
-                  child: Text(
-                    "Join the inner circle for early drops & exclusive access.",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                SizedBox(height: desktop ? 0 : 16, width: desktop ? 20 : 0),
-                SizedBox(
-                  width: desktop ? 320 : double.infinity,
-                  child: Row(
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Be first to know.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: NVColors.charcoal,
+              fontSize: isMobile ? 26 : 36,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Early access to drops, private previews, and members-only pricing.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: NVColors.charcoal.withValues(alpha: 0.6),
+              fontSize: 14.5,
+            ),
+          ),
+          const SizedBox(height: 32),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: isMobile
+                ? Column(
                     children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _emailController,
-                          style: const TextStyle(color: NVColors.richBlack),
-                          decoration: InputDecoration(
-                            hintText: "Your email",
-                            hintStyle:
-                                const TextStyle(color: NVColors.warmGray),
-                            filled: true,
-                            fillColor: NVColors.cardWhite,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(
-                                color: NVColors.inputBorderGray,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(
-                                color: NVColors.inputBorderGray,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(
-                                color: NVColors.champagneGold,
-                                width: 1.4,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      GestureDetector(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Subscribed!")),
-                          );
-                          _emailController.clear();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 13,
-                          ),
-                          decoration: BoxDecoration(
-                            color: NVColors.cardBorderBeige,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.arrow_forward,
-                              color: NVColors.richBlack, size: 18),
-                        ),
-                      ),
+                      _emailField(),
+                      const SizedBox(height: 12),
+                      _submitButton(),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Expanded(child: _emailField()),
+                      const SizedBox(width: 12),
+                      _submitButton(),
                     ],
                   ),
-                ),
-              ],
+          ),
+          if (_submitted) ...[
+            const SizedBox(height: 14),
+            Text(
+              "Welcome to NV's. Check your inbox.",
+              style: TextStyle(
+                color: NVColors.charcoal.withValues(alpha: 0.7),
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _emailField() {
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: NVColors.white,
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: NVColors.charcoal.withValues(alpha: 0.15)),
+      ),
+      alignment: Alignment.center,
+      child: TextField(
+        controller: _controller,
+        style: const TextStyle(fontSize: 14.5, color: NVColors.charcoal),
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          hintText: 'Enter your email',
+          hintStyle: TextStyle(
+            color: NVColors.charcoal.withValues(alpha: 0.4),
+            fontSize: 14.5,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _submitButton() {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => setState(() => _submitted = true),
+        child: AnimatedScale(
+          scale: _hover ? 1.04 : 1.0,
+          duration: const Duration(milliseconds: 160),
+          child: Container(
+            height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 30),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: NVColors.charcoal,
+              borderRadius: BorderRadius.circular(100),
+            ),
+            child: const Text(
+              'Subscribe',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14.5,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-          const SizedBox(height: 40),
+        ),
+      ),
+    );
+  }
+}
 
-          Text(
-  "New Vision's",
-  style: TextStyle(
-    fontFamily: "serif",
-    fontSize: desktop ? 28 : 22,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 1.8,
-    color: NVColors.ivoryWhite,
-  ),
-),
-          const SizedBox(height: 10),
-          const Text(
-            "Fashion for a generation that dresses for itself.",
-            style: TextStyle(color: Colors.white54, fontSize: 13),
-          ),
-          const SizedBox(height: 32),
+/// =================================================================
+/// FOOTER SECTION — watermark wordmark + link columns
+/// =================================================================
+class FooterSection extends StatelessWidget {
+  const FooterSection({super.key});
 
-          Wrap(
-            spacing: 40,
-            runSpacing: 24,
-            children: const [
-              _FooterColumn(
-                title: "SHOP",
-                items: [
-                  "New Arrivals",
-                  "Men",
-                  "Women",
-                  "Best Sellers",
-                  "Collections"
-                ],
-              ),
-              _FooterColumn(
-                title: "CUSTOMER SERVICE",
-                items: [
-                  "Track Order",
-                  "Returns & Exchanges",
-                  "Shipping Info",
-                  "FAQs"
-                ],
-              ),
-              _FooterColumn(
-                title: "COMPANY",
-                items: ["About Us", "Careers", "Sustainability", "Press"],
-              ),
-              _FooterColumn(
-                title: "CONTACT",
-                items: [
-                  "support@newvisions.com",
-                  "+91 98765 43210",
-                  "Mumbai, India"
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = NVBreak.isMobile(width);
+    final isTablet = NVBreak.isTablet(width);
+    final stacked = isMobile || isTablet;
 
-          Row(
-            children: [
-              _socialIcon(Icons.camera_alt_outlined),
-              _socialIcon(Icons.music_note_outlined),
-              _socialIcon(Icons.chat_bubble_outline),
-              _socialIcon(Icons.facebook_outlined),
-            ],
+    return Container(
+      width: double.infinity,
+      color: NVColors.charcoal,
+      child: Stack(
+        children: [
+          Positioned(
+            bottom: -40,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: Center(
+                child: Text(
+                  "NV'S",
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.045),
+                    fontSize: isMobile ? 110 : 260,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 4,
+                    height: 1,
+                  ),
+                ),
+              ),
+            ),
           ),
-          const Divider(color: Colors.white24, height: 44),
-          const Text(
-            "© 2026 New Vision's. All rights reserved.",
-            style: TextStyle(color: Colors.white38, fontSize: 12),
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              isMobile ? 22 : 48,
+              isMobile ? 56 : 90,
+              isMobile ? 22 : 48,
+              28,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                stacked
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _brandBlock(),
+                          const SizedBox(height: 44),
+                          _linkColumns(stacked: true),
+                        ],
+                      )
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 4, child: _brandBlock()),
+                          Expanded(flex: 6, child: _linkColumns(stacked: false)),
+                        ],
+                      ),
+                SizedBox(height: isMobile ? 50 : 80),
+                Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
+                const SizedBox(height: 22),
+                stacked
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _copyright(),
+                          const SizedBox(height: 14),
+                          _legalLinks(),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [_copyright(), _legalLinks()],
+                      ),
+                SizedBox(height: isMobile ? 40 : 60),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _socialIcon(IconData icon) {
-    return _HoverScale(
-      scale: 1.1,
-      child: Container(
-        margin: const EdgeInsets.only(right: 12),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white24),
+  Widget _brandBlock() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.2),
+              ),
+              child: const Text(
+                'N',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              "NV's",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 20,
+              ),
+            ),
+          ],
         ),
-        child: Icon(icon, color: NVColors.champagneGold, size: 18),
+        const SizedBox(height: 20),
+        SizedBox(
+          width: 300,
+          child: Text(
+            'Independent luxury fashion house. Designed for those who '
+            'set the standard, not follow it.',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.55),
+              fontSize: 13.5,
+              height: 1.7,
+            ),
+          ),
+        ),
+        const SizedBox(height: 26),
+        Row(
+          children: [
+            _HoverIcon(icon: Icons.camera_alt_outlined),
+            const SizedBox(width: 10),
+            _HoverIcon(icon: Icons.play_arrow_rounded),
+            const SizedBox(width: 10),
+            _HoverIcon(icon: Icons.alternate_email_rounded),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _linkColumns({required bool stacked}) {
+    final columns = [
+      const _FooterColumn(title: 'Shop', items: [
+        'New Arrivals',
+        'Womenswear',
+        'Menswear',
+        'Accessories',
+      ]),
+      const _FooterColumn(title: 'Brand', items: [
+        'Our Story',
+        'Sustainability',
+        'Craftsmanship',
+        'Careers',
+      ]),
+      const _FooterColumn(title: 'Support', items: [
+        'Contact Us',
+        'Shipping',
+        'Returns',
+        'Size Guide',
+      ]),
+    ];
+
+    if (stacked) {
+      return Wrap(
+        spacing: 40,
+        runSpacing: 32,
+        children: columns,
+      );
+    }
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: columns.map((c) => Expanded(child: c)).toList(),
+    );
+  }
+
+  Widget _copyright() {
+    return Text(
+      '\u00A9 ${DateTime.now().year} NV\'S. All rights reserved.',
+      style: TextStyle(
+        color: Colors.white.withValues(alpha: 0.45),
+        fontSize: 12.5,
       ),
+    );
+  }
+
+  Widget _legalLinks() {
+    return Wrap(
+      spacing: 20,
+      children: ['Privacy Policy', 'Terms of Service', 'Cookies']
+          .map(
+            (t) => Text(
+              t,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.45),
+                fontSize: 12.5,
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 }
@@ -1920,82 +1802,24 @@ class _FooterColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 170,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: NVColors.champagneGold,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.5,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ...items.map(
-            (e) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _HoverTextLink(e),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HoverTextLink extends StatefulWidget {
-  final String text;
-  const _HoverTextLink(this.text);
-
-  @override
-  State<_HoverTextLink> createState() => _HoverTextLinkState();
-}
-
-class _HoverTextLinkState extends State<_HoverTextLink> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedDefaultTextStyle(
-        duration: const Duration(milliseconds: 180),
-        style: TextStyle(
-          color: _hovered ? NVColors.champagneGold : Colors.white70,
-          fontSize: 13,
-        ),
-        child: Text(widget.text),
-      ),
-    );
-  }
-}
-
-/// ============================================================
-/// SHARED WIDGETS
-/// ============================================================
-
-class _SectionHeading extends StatelessWidget {
-  final String text;
-  const _SectionHeading(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 30, height: 3, color: NVColors.warmGold),
-        const SizedBox(width: 10),
         Text(
-          text,
+          title,
           style: const TextStyle(
-            color: NVColors.richBlack,
-            fontSize: 19,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1,
+            color: Colors.white,
+            fontSize: 14.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 18),
+        ...items.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _HoverLink(label: item),
           ),
         ),
       ],
@@ -2003,142 +1827,69 @@ class _SectionHeading extends StatelessWidget {
   }
 }
 
-/// Primary CTA (e.g. Shop Now) / Secondary CTA (e.g. Explore Collection).
-class _NVButton extends StatefulWidget {
+class _HoverLink extends StatefulWidget {
   final String label;
-  final bool filled;
-  final VoidCallback onTap;
-
-  const _NVButton({
-    required this.label,
-    required this.onTap,
-    this.filled = true,
-  });
+  const _HoverLink({required this.label});
 
   @override
-  State<_NVButton> createState() => _NVButtonState();
+  State<_HoverLink> createState() => _HoverLinkState();
 }
 
-class _NVButtonState extends State<_NVButton> {
-  bool _hovered = false;
+class _HoverLinkState extends State<_HoverLink> {
+  bool _hover = false;
 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
-          decoration: BoxDecoration(
-            color: widget.filled
-                ? NVColors.cardBorderBeige
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: widget.filled
-                  ? NVColors.cardBorderBeige
-                  : NVColors.champagneGold,
-              width: 1.4,
-            ),
-            boxShadow: _hovered
-                ? [
-                    BoxShadow(
-                      color: NVColors.champagneGold.withOpacity(0.55),
-                      blurRadius: 18,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : [],
-          ),
-          transform: Matrix4.translationValues(0, _hovered ? -2 : 0, 0),
-          child: Text(
-            widget.label,
-            style: TextStyle(
-              color: widget.filled ? NVColors.richBlack : NVColors.warmGold,
-              fontWeight: FontWeight.w700,
-              fontSize: 12.5,
-              letterSpacing: 1.2,
-            ),
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
+      child: AnimatedDefaultTextStyle(
+        duration: const Duration(milliseconds: 180),
+        style: TextStyle(
+          color: _hover ? NVColors.gold : Colors.white.withValues(alpha: 0.6),
+          fontSize: 13.5,
+        ),
+        child: Text(widget.label),
+      ),
+    );
+  }
+}
+
+class _HoverIcon extends StatefulWidget {
+  final IconData icon;
+  const _HoverIcon({required this.icon});
+
+  @override
+  State<_HoverIcon> createState() => _HoverIconState();
+}
+
+class _HoverIconState extends State<_HoverIcon> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 38,
+        height: 38,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: _hover ? NVColors.gold : Colors.white.withValues(alpha: 0.25),
           ),
         ),
+        child: Icon(
+          widget.icon,
+          color: _hover ? NVColors.gold : Colors.white70,
+          size: 17,
+        ),
       ),
-    );
-  }
-}
-
-/// Scale-on-hover wrapper reused across cards/icons.
-class _HoverScale extends StatefulWidget {
-  final Widget child;
-  final double scale;
-  const _HoverScale({required this.child, this.scale = 1.03});
-
-  @override
-  State<_HoverScale> createState() => _HoverScaleState();
-}
-
-class _HoverScaleState extends State<_HoverScale> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedScale(
-        scale: _hovered ? widget.scale : 1.0,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOut,
-        child: widget.child,
-      ),
-    );
-  }
-}
-
-/// Fade + slide entrance used to give every section a premium
-/// "reveal" feel as the page renders.
-class _FadeSlideIn extends StatefulWidget {
-  final Widget child;
-  const _FadeSlideIn({super.key, required this.child});
-
-  @override
-  State<_FadeSlideIn> createState() => _FadeSlideInState();
-}
-
-class _FadeSlideInState extends State<_FadeSlideIn>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _fade;
-  late final Animation<Offset> _slide;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    );
-    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _slide = Tween<Offset>(
-      begin: const Offset(0, 0.05),
-      end: Offset.zero,
-    ).animate(_fade);
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fade,
-      child: SlideTransition(position: _slide, child: widget.child),
     );
   }
 }
