@@ -22,8 +22,6 @@ class _AuthScreenState extends State<AuthScreen> {
       TextEditingController();
   final phoneController =
       TextEditingController();
-  final addressController =
-      TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -77,16 +75,6 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
               ),
 
-            if (!isLogin)
-              TextField(
-                controller:
-                    addressController,
-                decoration:
-                    const InputDecoration(
-                  labelText: "Address",
-                ),
-              ),
-
             const SizedBox(height: 20),
 
             ElevatedButton(
@@ -111,8 +99,6 @@ class _AuthScreenState extends State<AuthScreen> {
                         passwordController.text,
                     phone:
                         phoneController.text,
-                    address:
-                        addressController.text,
                   );
                 }
 

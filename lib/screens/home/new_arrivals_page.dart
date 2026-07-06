@@ -1,9 +1,15 @@
+import 'dart:async';
+
+import 'package:clothx/controllers/auth_controller.dart';
 import 'package:clothx/controllers/product_controller.dart';
+import 'package:clothx/controllers/wishlist_controller.dart';
 import 'package:clothx/models/product_model.dart';
+import 'package:clothx/screens/home/profile_page.dart';
+import 'package:clothx/screens/home/utils/color_utils.dart';
 import 'package:clothx/screens/orders/quick_view.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../home/home_screen.dart' show NVColors, NVBreak, PremiumButton, ButtonVariant;
+import '../home/home_screen.dart' show NVBreak, PremiumButton, ButtonVariant, HomeScreen;
 
 /// =================================================================
 /// NV'S — NEW ARRIVALS PAGE  (UI ONLY — single-file build)
@@ -67,7 +73,14 @@ const _swatchColors = [
 // NEW ARRIVALS SCREEN
 // =================================================================
 class NewArrivalsScreen extends StatefulWidget {
-  const NewArrivalsScreen({super.key});
+  final String? gender;
+  final bool isSearch;
+
+  const NewArrivalsScreen({
+        this.isSearch = false,
+    super.key,
+    this.gender,
+  });
 
   @override
   State<NewArrivalsScreen> createState() => _NewArrivalsScreenState();
@@ -75,7 +88,24 @@ class NewArrivalsScreen extends StatefulWidget {
 
 class _NewArrivalsScreenState extends State<NewArrivalsScreen> {
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController =
+    TextEditingController();
 
+Timer? _debounce;
+
+String _searchQuery = "";
+String get pageTitle {
+  switch (widget.gender?.toLowerCase()) {
+    case "male":
+      return "MEN";
+
+    case "female":
+      return "WOMEN";
+
+    default:
+      return "NEW ARRIVALS";
+  }
+}
   // Data state
   bool _isInitialLoading = true;
   bool _isLoadingMore = false;
@@ -97,13 +127,26 @@ List<ProductModel> get _products =>
 void initState() {
   super.initState();
 
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    _loadInitial();
-  });
+WidgetsBinding.instance.addPostFrameCallback((_) async {
+  final auth = context.read<AuthController>();
+  final wishlist = context.read<WishlistController>();
+
+  final uid = auth.currentUser?.uid;
+
+  if (uid != null) {
+    wishlist.loadFromCache(uid);
+    await wishlist.syncWishlist(uid);
+  }
+
+  _loadInitial();
+});
 }
 
   @override
   void dispose() {
+      _debounce?.cancel();
+  _searchController.dispose();
+
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -116,7 +159,34 @@ void initState() {
       _loadMore();
     }
   }
+void _onSearchChanged(String value) {
+  _debounce?.cancel();
 
+  if (value.trim().length < 2) {
+    setState(() {
+      _searchQuery = "";
+    });
+    return;
+  }
+
+  _debounce = Timer(
+    const Duration(milliseconds: 400),
+    () async {
+      _searchQuery = value.trim();
+
+      await context
+          .read<ProductController>()
+          .searchProducts(
+            _searchQuery,
+            gender: widget.gender,
+          );
+
+      if (mounted) {
+        setState(() {});
+      }
+    },
+  );
+}
 Future<void> _loadInitial() async {
   final controller =
       context.read<ProductController>();
@@ -146,47 +216,89 @@ Future<void> _loadMore() async {
     });
   }
 
-  List<ProductModel> get _filteredProducts {
-    var list = _products.where((p) {
-      if (p.price < _priceRange.start || p.price > _priceRange.end) {
-        return false;
-      }
-      if (_selectedColors.isNotEmpty &&
-          !p.colors.any((c) => _selectedColors.contains(c))) {
-        return false;
-      }
-      if (_selectedSizes.isNotEmpty &&
-          !p.sizes.any((s) => _selectedSizes.contains(s))) {
-        return false;
-      }
-      if (_selectedCategories.isNotEmpty &&
-          !_selectedCategories.contains(p.category)) {
-        return false;
-      }
+List<ProductModel> get _filteredProducts {
+  final controller = context.watch<ProductController>();
 
-      if (_inStockOnly && p.stock <= 0) return false;
-      if (0 < _minRating) return false;
-      return true;
-    }).toList();
+  final sourceProducts = widget.isSearch
+      ? controller.searchResults
+      : _products;
 
-    switch (_sortOption) {
-      case SortOption.newest:
-        list.sort((a, b) => DateTime.now().difference(a.createdAt).inDays <= 30 ? 1 : -1);
-        break;
-case SortOption.bestSelling:
-  // TODO: Sort by sales/reviews when backend is available.
-  break;
-      case SortOption.priceLowHigh:
-        list.sort((a, b) => a.price.compareTo(b.price));
-        break;
-      case SortOption.priceHighLow:
-        list.sort((a, b) => b.price.compareTo(a.price));
-        break;
+  // ================= DEBUG =================
+  print("========== FILTER DEBUG ==========");
+  print("isSearch      : ${widget.isSearch}");
+  print("Gender        : ${widget.gender}");
+  print("Products      : ${_products.length}");
+  print("SearchResults : ${controller.searchResults.length}");
+  print("SourceProducts: ${sourceProducts.length}");
+  print("==================================");
+  // =========================================
+
+  var list = sourceProducts.where((p) {
+    // Gender filter
+    if (widget.gender != null &&
+        p.gender.toLowerCase() != widget.gender!.toLowerCase()) {
+      return false;
     }
-    return list;
+
+    // Price filter
+    if (p.price < _priceRange.start ||
+        p.price > _priceRange.end) {
+      return false;
+    }
+
+    // Color filter
+    if (_selectedColors.isNotEmpty &&
+        !p.colors.any(
+          (c) => _selectedColors.contains(
+            colorFromName(c.name),
+          ),
+        )) {
+      return false;
+    }
+
+    // Size filter
+    if (_selectedSizes.isNotEmpty &&
+        !p.sizes.any((s) => _selectedSizes.contains(s))) {
+      return false;
+    }
+
+    // Category filter
+    if (_selectedCategories.isNotEmpty &&
+        !_selectedCategories.contains(p.category)) {
+      return false;
+    }
+
+    // Stock filter
+    if (_inStockOnly && p.stock <= 0) {
+      return false;
+    }
+
+    return true;
+  }).toList();
+
+  print("Filtered Products : ${list.length}");
+
+  switch (_sortOption) {
+    case SortOption.newest:
+      list.sort(
+        (a, b) => b.createdAt.compareTo(a.createdAt),
+      );
+      break;
+
+    case SortOption.bestSelling:
+      break;
+
+    case SortOption.priceLowHigh:
+      list.sort((a, b) => a.price.compareTo(b.price));
+      break;
+
+    case SortOption.priceHighLow:
+      list.sort((a, b) => b.price.compareTo(a.price));
+      break;
   }
 
-  // TODO(integration): hook these into your existing logic.
+  return list;
+} // TODO(integration): hook these into your existing logic.
   void _onProductTap(ProductModel p) {}
   void _onAddToCart(ProductModel p) {}
   void _onToggleWishlist(ProductModel p) {}
@@ -228,8 +340,7 @@ case SortOption.bestSelling:
       ),
     );
   }
-
-  @override
+@override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: NVColors.ivory,
@@ -243,7 +354,14 @@ case SortOption.bestSelling:
 
             return Column(
               children: [
-                _TopBar(isMobile: isMobile, onFilterTap: _openFilterSheet),
+_TopBar(
+  isMobile: isMobile,
+  gender: widget.gender,
+  isSearch: widget.isSearch,
+  searchController: _searchController,
+  onSearchChanged: _onSearchChanged,
+  onFilterTap: _openFilterSheet,
+),
                 Expanded(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,10 +382,10 @@ case SortOption.bestSelling:
                               onPriceChanged: (v) =>
                                   setState(() => _priceRange = v),
                               onColorToggled: (c) => setState(() {
-                                _selectedColors.contains(c)
-                                    ? _selectedColors.remove(c)
-                                    : _selectedColors.add(c);
-                              }),
+  _selectedColors.contains(c)
+      ? _selectedColors.remove(c)
+      : _selectedColors.add(c);
+}),
                               onSizeToggled: (s) => setState(() {
                                 _selectedSizes.contains(s)
                                     ? _selectedSizes.remove(s)
@@ -294,7 +412,13 @@ case SortOption.bestSelling:
                           color: NVColors.charcoal.withValues(alpha: 0.08),
                         ),
                       Expanded(
-                        child: _ProductArea(
+                        child: 
+                        _ProductArea(
+  title: widget.gender == null
+      ? "NEW ARRIVALS"
+      : widget.gender!.toLowerCase() == "men"
+          ? "MEN COLLECTION"
+          : "WOMEN COLLECTION",
                           isMobile: isMobile,
                           isTablet: isTablet,
                           isInitialLoading: _isInitialLoading,
@@ -328,10 +452,18 @@ case SortOption.bestSelling:
 // =================================================================
 class _TopBar extends StatelessWidget {
   final bool isMobile;
+  final bool isSearch;
+  final String? gender;
   final VoidCallback onFilterTap;
+  final TextEditingController searchController;
+  final ValueChanged<String> onSearchChanged;
 
-  const _TopBar({required this.isMobile, required this.onFilterTap});
-
+  const _TopBar({
+    super.key,
+    required this.isMobile,
+    required this.onFilterTap,
+    this.gender, required this.isSearch, required this.searchController, required this.onSearchChanged,
+  });
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -351,8 +483,32 @@ class _TopBar extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           // Centered brand wordmark
-          Text(
-            "NV's",
+isSearch
+    ? SizedBox(
+        width: isMobile ? double.infinity : 420,
+        child: TextField(
+          controller: searchController,
+          autofocus: true,
+          onChanged: onSearchChanged,
+          decoration: InputDecoration(
+            hintText: "Search products...",
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(40),
+            ),
+          ),
+        ),
+      )
+    : Text(
+        "NV's",
             style: TextStyle(
               color: NVColors.charcoal,
               fontWeight: FontWeight.w700,
@@ -397,24 +553,161 @@ class _TopBar extends StatelessWidget {
                       children: [
                         _CircleIconButton(
                           icon: Icons.search_rounded,
-                          onTap: () {},
+                          onTap: () {
+Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => NewArrivalsScreen(
+      isSearch: true,
+      gender: gender,
+    ),
+  ),
+);
+                          },
                           tooltip: 'Search',
                         ),
                         const SizedBox(width: 8),
                         _CircleIconButton(
-                          icon: Icons.menu_rounded,
-                          onTap: () {},
-                          tooltip: 'Menu',
-                        ),
+  icon: Icons.menu_rounded,
+  onTap: () {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+ListTile(
+  title: const Text("New Arrivals"),
+  onTap: () {
+    Navigator.pop(context);
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const NewArrivalsScreen(),
+      ),
+    );
+  },
+),
+ListTile(
+  title: const Text("Men"),
+  onTap: () {
+    Navigator.pop(context);
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const NewArrivalsScreen(
+          gender: "men",
+        ),
+      ),
+    );
+  },
+),
+ListTile(
+  title: const Text("Women"),
+  onTap: () {
+    Navigator.pop(context);
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const NewArrivalsScreen(
+          gender: "women",
+        ),
+      ),
+    );
+  },
+),
+            ],
+          ),
+        );
+      },
+    );
+  },
+  tooltip: 'Menu',
+),
                       ],
                     )
                   : Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        _NavItem(label: 'New Arrivals', active: true),
-                        _NavItem(label: 'Brand'),
-                        _NavItem(label: 'Account'),
-                        _NavItem(label: 'Search', icon: Icons.search_rounded),
+                      children:  [
+_NavItem(
+  label: 'NEW ARRIVALS',
+  active: gender == null,
+  onTap: () {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const NewArrivalsScreen(),
+      ),
+    );
+  },
+),
+
+_NavItem(
+  label: 'Men',
+  active: gender == "men",
+  onTap: () {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const NewArrivalsScreen(
+          gender: "men",
+        ),
+      ),
+    );
+  },
+),
+
+_NavItem(
+  label: 'Women',
+  active: gender == "women",
+  onTap: () {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const NewArrivalsScreen(
+          gender: "women",
+        ),
+      ),
+    );
+  },
+),
+
+_NavItem(
+  label: 'Account',
+ onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const AccountPage()
+      ),
+    );
+  },
+),
+
+_NavItem(
+  label: 'Search',
+  icon: Icons.search_rounded,
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => NewArrivalsScreen(
+          isSearch: true,
+          gender: gender,
+        ),
+      ),
+    );
+  },
+),
                       ],
                     ),
             ],
@@ -429,8 +722,15 @@ class _NavItem extends StatefulWidget {
   final String label;
   final IconData? icon;
   final bool active;
-  const _NavItem({required this.label, this.icon, this.active = false});
+  final VoidCallback? onTap;
 
+  const _NavItem({
+    super.key,
+    required this.label,
+    this.icon,
+    this.active = false,
+    this.onTap,
+  });
   @override
   State<_NavItem> createState() => _NavItemState();
 }
@@ -450,7 +750,7 @@ class _NavItemState extends State<_NavItem> {
         onEnter: (_) => setState(() => _hover = true),
         onExit: (_) => setState(() => _hover = false),
         child: GestureDetector(
-          onTap: () {},
+  onTap: widget.onTap,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -512,6 +812,8 @@ class _CircleIconButton extends StatelessWidget {
 // PRODUCT AREA — breadcrumb, sort bar, grid/shimmer/empty-state
 // =================================================================
 class _ProductArea extends StatelessWidget {
+  final String title;
+
   final bool isMobile;
   final bool isTablet;
   final bool isInitialLoading;
@@ -528,6 +830,7 @@ class _ProductArea extends StatelessWidget {
   final ValueChanged<ProductModel> onQuickView;
 
   const _ProductArea({
+    required this.title,
     required this.isMobile,
     required this.isTablet,
     required this.isInitialLoading,
@@ -562,14 +865,19 @@ class _ProductArea extends StatelessWidget {
         SliverPadding(
           padding: EdgeInsets.fromLTRB(hPad, isMobile ? 14 : 24, hPad, 0),
           sliver: SliverToBoxAdapter(
-            child: _Breadcrumb(isMobile: isMobile),
+            child: _Breadcrumb(
+  isMobile: isMobile,
+  title: title,
+),
           ),
         ),
         SliverPadding(
           padding: EdgeInsets.fromLTRB(hPad, 10, hPad, 0),
           sliver: SliverToBoxAdapter(
-            child: _SortBar(
-              isMobile: isMobile,
+            child:
+_SortBar(
+  title: title,
+  isMobile: isMobile,
               count: products.length,
               sortOption: sortOption,
               onSortChanged: onSortChanged,
@@ -618,10 +926,15 @@ class _ProductArea extends StatelessWidget {
     );
   }
 }
-
 class _Breadcrumb extends StatelessWidget {
   final bool isMobile;
-  const _Breadcrumb({required this.isMobile});
+  final String title;
+
+  const _Breadcrumb({
+    super.key,
+    required this.isMobile,
+    required this.title,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -632,14 +945,31 @@ class _Breadcrumb extends StatelessWidget {
     );
     return Row(
       children: [
-        Text('Home', style: baseStyle),
+InkWell(
+  borderRadius: BorderRadius.circular(4),
+  onTap: () {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const HomeScreen(),
+      ),
+      (route) => false,
+    );
+  },
+  child: Text(
+    'Home',
+    style: baseStyle.copyWith(
+      decoration: TextDecoration.underline,
+    ),
+  ),
+),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Icon(Icons.chevron_right_rounded,
               size: 16, color: NVColors.charcoal.withValues(alpha: 0.4)),
         ),
         Text(
-          'New Arrivals',
+title,
           style: baseStyle.copyWith(
             color: NVColors.charcoal,
             fontWeight: FontWeight.w700,
@@ -651,6 +981,7 @@ class _Breadcrumb extends StatelessWidget {
 }
 
 class _SortBar extends StatelessWidget {
+  final String title;
   final bool isMobile;
   final int count;
   final SortOption sortOption;
@@ -658,6 +989,7 @@ class _SortBar extends StatelessWidget {
   final VoidCallback onFilterTap;
 
   const _SortBar({
+    required this.title,
     required this.isMobile,
     required this.count,
     required this.sortOption,
@@ -673,7 +1005,8 @@ class _SortBar extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              'NEW ARRIVALS',
+                title,
+
               style: TextStyle(
                 color: NVColors.charcoal,
                 fontSize: isMobile ? 20 : 28,
@@ -892,13 +1225,20 @@ class _ProductCard extends StatefulWidget {
 
 class _ProductCardState extends State<_ProductCard> {
   bool _hover = false;
-  bool _wishlisted = false;
   String? _selectedSize;
 
   @override
   Widget build(BuildContext context) {
     final p = widget.product;
+final auth = context.read<AuthController>();
 
+final wishlistController =
+    context.watch<WishlistController>();
+
+final uid = auth.currentUser?.uid;
+
+final isWishlisted =
+    wishlistController.isWishlisted(p.id);
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
@@ -971,16 +1311,24 @@ class _ProductCardState extends State<_ProductCard> {
                       Positioned(
                         top: 10,
                         right: 10,
-                        child: _GlassCircleButton(
-                          icon: _wishlisted
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          iconColor: _wishlisted ? NVColors.gold : NVColors.charcoal,
-                          onTap: () {
-                            setState(() => _wishlisted = !_wishlisted);
-                            widget.onToggleWishlist();
-                          },
-                        ),
+                        child:_GlassCircleButton(
+  icon: isWishlisted
+      ? Icons.favorite_rounded
+      : Icons.favorite_border_rounded,
+  iconColor: isWishlisted
+      ? Colors.red
+      : NVColors.charcoal,
+  onTap: () async {
+    if (uid == null) return;
+
+    await wishlistController.toggleWishlist(
+      uid,
+      p.id,
+    );
+
+    widget.onToggleWishlist();
+  },
+),
                       ),
                       // Quick view — fades in on hover (desktop) and stays
                       // subtly visible via a small always-on affordance
@@ -1085,35 +1433,8 @@ class _ProductCardState extends State<_ProductCard> {
       ),
     );
   }
-  Color colorFromName(String name) {
-  switch (name.toLowerCase()) {
-    case 'black':
-      return Colors.black;
-    case 'white':
-      return Colors.white;
-    case 'red':
-      return Colors.red;
-    case 'blue':
-      return Colors.blue;
-    case 'green':
-      return Colors.green;
-    case 'yellow':
-      return Colors.yellow;
-    case 'grey':
-    case 'gray':
-      return Colors.grey;
-    case 'brown':
-      return Colors.brown;
-    case 'pink':
-      return Colors.pink;
-    case 'orange':
-      return Colors.orange;
-    case 'purple':
-      return Colors.purple;
-    default:
-      return Colors.black26;
-  }
-}
+
+
 }
 
 class _Badge extends StatelessWidget {

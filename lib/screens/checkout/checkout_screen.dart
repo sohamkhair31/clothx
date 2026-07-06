@@ -1,3 +1,5 @@
+import 'package:clothx/controllers/address_controller.dart';
+import 'package:clothx/screens/orders/address_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -50,16 +52,30 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _placingOrder = false;
   _PaymentMethod _paymentMethod = _PaymentMethod.cod;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final auth = context.read<AuthController>();
-      if (auth.currentUserData == null && auth.currentUser != null) {
-        auth.getUserData();
-      }
-    });
-  }
+@override
+void initState() {
+  super.initState();
+
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    final auth = context.read<AuthController>();
+
+    if (auth.currentUser == null) return;
+
+    if (auth.currentUserData == null) {
+      await auth.getUserData();
+    }
+
+    final addressController = context.read<AddressController>();
+
+    addressController.loadAddressesFromCache(
+      auth.currentUser!.uid,
+    );
+
+    await addressController.fetchAddresses(
+      auth.currentUser!.uid,
+    );
+  });
+}
 
   void _showSnack(String message, {SnackBarAction? action}) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -73,19 +89,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  void _openEditAddressSheet() {
-    final auth = context.read<AuthController>();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _EditAddressSheet(
-        initialName: auth.currentUserData?.name ?? '',
-        initialPhone: auth.currentUserData?.phone ?? '',
-        initialAddress: auth.currentUserData?.address ?? '',
+Future<void> _openEditAddressSheet() async {
+  final auth = context.read<AuthController>();
+
+  if (auth.currentUser == null) return;
+
+  await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => AddressFormScreen(
+        userId: auth.currentUser!.uid,
       ),
-    );
-  }
+    ),
+  );
+
+  if (!mounted) return;
+
+  final addressController =
+      context.read<AddressController>();
+
+  addressController.loadAddressesFromCache(
+    auth.currentUser!.uid,
+  );
+
+  await addressController.fetchAddresses(
+    auth.currentUser!.uid,
+  );
+}
+
 
   void _removeItem(int index) {
     final cart = context.read<CartController>();
@@ -103,50 +134,78 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Future<void> _placeOrder() async {
-    final auth = context.read<AuthController>();
-    final cart = context.read<CartController>();
-    final order = context.read<OrderController>();
+Future<void> _placeOrder() async {
+  final auth = context.read<AuthController>();
+  final cart = context.read<CartController>();
+  final order = context.read<OrderController>();
+  final addressController = context.read<AddressController>();
 
-    if (auth.currentUser == null) {
-      _showSnack('Please log in to place an order');
-      return;
-    }
-    if (cart.cartItems.isEmpty) {
-      _showSnack('Your bag is empty');
-      return;
-    }
-    if (auth.currentUserData == null || auth.currentUserData!.address.trim().isEmpty) {
-      _showSnack('Please add a delivery address to continue');
-      _openEditAddressSheet();
-      return;
-    }
+  if (auth.currentUser == null) {
+    _showSnack('Please log in to place an order');
+    return;
+  }
 
-    setState(() => _placingOrder = true);
+  if (cart.cartItems.isEmpty) {
+    _showSnack('Your bag is empty');
+    return;
+  }
 
-    final success = await order.placeOrder(
-      userId: auth.currentUser!.uid,
-      items: List<CartModel>.from(cart.cartItems),
-      totalAmount: cart.totalPrice,
-      cartController: cart,
-      paymentMethod: _paymentMethod == _PaymentMethod.online ? 'Online' : 'COD',
+  final address = addressController.defaultAddress;
+
+  if (address == null) {
+    _showSnack('Please add a delivery address to continue');
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddressFormScreen(
+          userId: auth.currentUser!.uid,
+        ),
+      ),
     );
 
     if (!mounted) return;
-    setState(() => _placingOrder = false);
 
-    if (success) {
-      _showSnack('Order placed successfully');
-      Navigator.of(context).maybePop();
-    } else {
-      _showSnack(order.errorMessage ?? 'Could not place order. Please try again.');
-    }
+    addressController.loadAddressesFromCache(
+      auth.currentUser!.uid,
+    );
+
+    await addressController.fetchAddresses(
+      auth.currentUser!.uid,
+    );
+
+    return;
   }
 
+  setState(() => _placingOrder = true);
+
+  final success = await order.placeOrder(
+    userId: auth.currentUser!.uid,
+    items: List<CartModel>.from(cart.cartItems),
+    totalAmount: cart.totalPrice,
+    cartController: cart,
+    paymentMethod:
+        _paymentMethod == _PaymentMethod.online ? 'Online' : 'COD',
+  );
+
+  if (!mounted) return;
+
+  setState(() => _placingOrder = false);
+
+  if (success) {
+    _showSnack('Order placed successfully');
+    Navigator.of(context).maybePop();
+  } else {
+    _showSnack(
+      order.errorMessage ?? 'Could not place order. Please try again.',
+    );
+  }
+}
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartController>();
-    final auth = context.watch<AuthController>();
+final auth = context.watch<AuthController>();
+final addressController = context.watch<AddressController>();
     final order = context.watch<OrderController>();
 
     return Scaffold(
@@ -170,6 +229,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             final details = _CheckoutDetailsColumn(
               cart: cart,
               auth: auth,
+                addressController: addressController,
               isPlacing: _placingOrder || order.isLoading,
               paymentMethod: _paymentMethod,
               onPaymentMethodChanged: (m) => setState(() => _paymentMethod = m),
@@ -435,22 +495,24 @@ class _CheckoutDetailsColumn extends StatelessWidget {
   final ValueChanged<_PaymentMethod> onPaymentMethodChanged;
   final VoidCallback onEditAddress;
   final VoidCallback onPlaceOrder;
-
+final AddressController addressController;
   const _CheckoutDetailsColumn({
     required this.cart,
     required this.auth,
+  
     required this.isPlacing,
     required this.paymentMethod,
     required this.onPaymentMethodChanged,
     required this.onEditAddress,
-    required this.onPlaceOrder,
+    required this.onPlaceOrder, required this.addressController,
   });
 
   @override
   Widget build(BuildContext context) {
-    final userData = auth.currentUserData;
-    final hasAddress = userData != null && userData.address.trim().isNotEmpty;
+final userData = auth.currentUserData;
+final address = addressController.defaultAddress;
 
+final hasAddress = address != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -472,13 +534,19 @@ class _CheckoutDetailsColumn extends StatelessWidget {
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(userData!.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                    Text(  userData?.name ?? '', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                     const SizedBox(height: 4),
-                    Text(userData.phone,
+                    Text(address.phone,
                         style: TextStyle(fontSize: 13, color: NVColors.charcoal.withValues(alpha: 0.7))),
                     const SizedBox(height: 4),
-                    Text(userData.address,
-                        style: TextStyle(fontSize: 13, color: NVColors.charcoal.withValues(alpha: 0.7))),
+Text(
+  "${address.house}, ${address.area}, ${address.city}, "
+  "${address.state} ${address.pincode}, ${address.country}",
+  style: TextStyle(
+    fontSize: 13,
+    color: NVColors.charcoal.withValues(alpha: 0.7),
+  ),
+),
                   ],
                 )
               : Text(
@@ -701,126 +769,126 @@ class _EmptyCartState extends StatelessWidget {
 // EDIT ADDRESS BOTTOM SHEET — uses AuthController.updateProfile()
 // =================================================================
 
-class _EditAddressSheet extends StatefulWidget {
-  final String initialName;
-  final String initialPhone;
-  final String initialAddress;
+// class _EditAddressSheet extends StatefulWidget {
+//   final String initialName;
+//   final String initialPhone;
+//   final String initialAddress;
 
-  const _EditAddressSheet({
-    required this.initialName,
-    required this.initialPhone,
-    required this.initialAddress,
-  });
+//   const _EditAddressSheet({
+//     required this.initialName,
+//     required this.initialPhone,
+//     required this.initialAddress,
+//   });
 
-  @override
-  State<_EditAddressSheet> createState() => _EditAddressSheetState();
-}
+//   @override
+//   State<_EditAddressSheet> createState() => _EditAddressSheetState();
+// }
 
-class _EditAddressSheetState extends State<_EditAddressSheet> {
-  late final TextEditingController _nameCtrl = TextEditingController(text: widget.initialName);
-  late final TextEditingController _phoneCtrl = TextEditingController(text: widget.initialPhone);
-  late final TextEditingController _addressCtrl = TextEditingController(text: widget.initialAddress);
-  bool _saving = false;
+// // class _EditAddressSheetState extends State<_EditAddressSheet> {
+//   late final TextEditingController _nameCtrl = TextEditingController(text: widget.initialName);
+//   late final TextEditingController _phoneCtrl = TextEditingController(text: widget.initialPhone);
+//   late final TextEditingController _addressCtrl = TextEditingController(text: widget.initialAddress);
+//   bool _saving = false;
 
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    _phoneCtrl.dispose();
-    _addressCtrl.dispose();
-    super.dispose();
-  }
+//   @override
+//   void dispose() {
+//     _nameCtrl.dispose();
+//     _phoneCtrl.dispose();
+//     _addressCtrl.dispose();
+//     super.dispose();
+//   }
 
-  Future<void> _save() async {
-    if (_nameCtrl.text.trim().isEmpty ||
-        _phoneCtrl.text.trim().isEmpty ||
-        _addressCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
-      );
-      return;
-    }
+//   Future<void> _save() async {
+//     if (_nameCtrl.text.trim().isEmpty ||
+//         _phoneCtrl.text.trim().isEmpty ||
+//         _addressCtrl.text.trim().isEmpty) {
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         const SnackBar(content: Text('Please fill in all fields')),
+//       );
+//       return;
+//     }
 
-    setState(() => _saving = true);
+//     setState(() => _saving = true);
 
-    final success = await context.read<AuthController>().updateProfile(
-          name: _nameCtrl.text.trim(),
-          phone: _phoneCtrl.text.trim(),
-          address: _addressCtrl.text.trim(),
-        );
+//     final success = await context.read<AuthController>().updateProfile(
+//           name: _nameCtrl.text.trim(),
+//           phone: _phoneCtrl.text.trim(),
+//           address: _addressCtrl.text.trim(),
+//         );
 
-    if (!mounted) return;
-    setState(() => _saving = false);
+//     if (!mounted) return;
+//     setState(() => _saving = false);
 
-    if (success) {
-      Navigator.of(context).maybePop();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not save address. Please try again.')),
-      );
-    }
-  }
+//     if (success) {
+//       Navigator.of(context).maybePop();
+//     } else {
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         const SnackBar(content: Text('Could not save address. Please try again.')),
+//       );
+//     }
+//   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: NVColors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: NVColors.charcoal.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-              const Text('Delivery Details', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-              const SizedBox(height: 16),
-              _field(_nameCtrl, 'Full Name'),
-              const SizedBox(height: 12),
-              _field(_phoneCtrl, 'Phone Number', keyboardType: TextInputType.phone),
-              const SizedBox(height: 12),
-              _field(_addressCtrl, 'Delivery Address', maxLines: 3),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: PremiumButton(
-                  label: _saving ? 'Saving...' : 'Save Address',
-                  variant: ButtonVariant.solid,
-                  onTap: _saving ? () {} : _save,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+//   @override
+//   Widget build(BuildContext context) {
+//     return Padding(
+//       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+//       child: Container(
+//         decoration: const BoxDecoration(
+//           color: NVColors.white,
+//           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+//         ),
+//         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+//         child: SingleChildScrollView(
+//           child: Column(
+//             mainAxisSize: MainAxisSize.min,
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               Center(
+//                 child: Container(
+//                   width: 44,
+//                   height: 4,
+//                   margin: const EdgeInsets.only(bottom: 16),
+//                   decoration: BoxDecoration(
+//                     color: NVColors.charcoal.withValues(alpha: 0.15),
+//                     borderRadius: BorderRadius.circular(10),
+//                   ),
+//                 ),
+//               ),
+//               const Text('Delivery Details', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+//               const SizedBox(height: 16),
+//               _field(_nameCtrl, 'Full Name'),
+//               const SizedBox(height: 12),
+//               _field(_phoneCtrl, 'Phone Number', keyboardType: TextInputType.phone),
+//               const SizedBox(height: 12),
+//               _field(_addressCtrl, 'Delivery Address', maxLines: 3),
+//               const SizedBox(height: 20),
+//               SizedBox(
+//                 width: double.infinity,
+//                 height: 50,
+//                 child: PremiumButton(
+//                   label: _saving ? 'Saving...' : 'Save Address',
+//                   variant: ButtonVariant.solid,
+//                   onTap: _saving ? () {} : _save,
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
 
-  Widget _field(TextEditingController controller, String label, {int maxLines = 1, TextInputType? keyboardType}) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: label,
-        filled: true,
-        fillColor: NVColors.ivory,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      ),
-    );
-  }
-}
+//   Widget _field(TextEditingController controller, String label, {int maxLines = 1, TextInputType? keyboardType}) {
+//     return TextField(
+//       controller: controller,
+//       maxLines: maxLines,
+//       keyboardType: keyboardType,
+//       decoration: InputDecoration(
+//         labelText: label,
+//         filled: true,
+//         fillColor: NVColors.ivory,
+//         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+//       ),
+//     );
+//   }
+// }

@@ -14,9 +14,27 @@ class AddressController extends ChangeNotifier {
   String? errorMessage;
 
   static const int addressLimit = 10;
+int get count => addresses.length;bool get hasAddress => addresses.isNotEmpty;
+List<AddressModel> get sortedAddresses {
+  final list = [...addresses];
 
+  list.sort((a, b) {
+    if (a.isDefault == b.isDefault) {
+      return b.createdAt.compareTo(a.createdAt);
+    }
+
+    return a.isDefault ? -1 : 1;
+  });
+
+  return list;
+}
   // ================= LOAD CACHE =================
-
+Future<void> _saveCache(String userId) async {
+  await _cacheService.addressBox.put(
+    "addresses_$userId",
+    addresses.map((e) => e.toMap()).toList(),
+  );
+}
   void loadAddressesFromCache(
     String userId,
   ) {
@@ -106,12 +124,22 @@ class AddressController extends ChangeNotifier {
       isLoading = true;
       notifyListeners();
 
-      await _addressRepo.addAddress(
-        userId: userId,
-        address: address,
-      );
+if (address.isDefault) {
+  addresses = addresses
+      .map((e) => e.copyWith(isDefault: false))
+      .toList();
+}
 
-      await fetchAddresses(userId);
+addresses.insert(0, address);
+
+await _saveCache(userId);
+
+notifyListeners();
+
+await _addressRepo.addAddress(
+  userId: userId,
+  address: address,
+);
 
       return true;
     } catch (e) {

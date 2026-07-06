@@ -1,5 +1,6 @@
 import 'package:clothx/controllers/cart_controller.dart';
 import 'package:clothx/controllers/product_controller.dart';
+import 'package:clothx/core/services/cache/cache_service.dart';
 import 'package:clothx/models/cart_model.dart';
 import 'package:clothx/models/product_model.dart';
 import 'package:clothx/screens/checkout/checkout_screen.dart';
@@ -59,6 +60,8 @@ class QuickView {
   QuickView._();
 
   static Future<void> show(BuildContext context, ProductModel product) {
+    final cache = CacheService();
+cache.addRecentProduct(product);
     final width = MediaQuery.of(context).size.width;
     final isMobile = width < 700;
 
@@ -227,6 +230,7 @@ class _QuickViewBodyState extends State<_QuickViewBody> {
   }
 
   void _switchToProduct(ProductModel newProduct) {
+    CacheService().addRecentProduct(newProduct);
     setState(() {
       product = newProduct;
       selectedColorIndex = 0;

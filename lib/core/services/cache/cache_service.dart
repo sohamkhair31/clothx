@@ -1,4 +1,5 @@
 import 'package:clothx/models/order_model.dart';
+import 'package:clothx/models/product_model.dart';
 import 'package:hive/hive.dart';
 
 class CacheService {
@@ -8,6 +9,7 @@ class CacheService {
   factory CacheService() => _instance;
 
   CacheService._internal();
+  static const String recentProductsBoxName = "recent_products";
 static const String addressBoxName =
     "addresses";
   static const String productBoxName =
@@ -22,6 +24,8 @@ static const String addressBoxName =
       "orders";
   static const String adminBoxName =
       "admin";
+  static const String wishlistBoxName =
+      "wishlist";
 late Box addressBox;
   late Box productBox;
   late Box reviewBox;
@@ -29,8 +33,13 @@ late Box addressBox;
   late Box userBox;
   late Box orderBox;
   late Box adminBox;
+  late Box recentProductsBox;
+  late Box wishlistBox;
 
   Future<void> init() async {
+    recentProductsBox = await Hive.openBox(
+  CacheService.recentProductsBoxName,
+);
     addressBox =
     await Hive.openBox(addressBoxName);
     productBox =
@@ -50,6 +59,9 @@ late Box addressBox;
 
     adminBox =
         await Hive.openBox(adminBoxName);
+
+    wishlistBox =
+        await Hive.openBox(wishlistBoxName);
   }
   
   //================= ADDRESSES =================
@@ -322,6 +334,50 @@ Future<void> clearOrders(
     );
   }
 
+  // ================= WISHLIST =================
+  Future<void> saveWishlist(
+    String userId,
+    List<Map<String, dynamic>> items,
+  ) async {
+    await wishlistBox.put(
+      "wishlist_$userId",
+      items,
+    );
+  }
+
+  List getWishlist(String userId) {
+    return wishlistBox.get(
+      "wishlist_$userId",
+      defaultValue: [],
+    );
+  }
+
+  Future<void> saveWishlistMeta(
+    String userId,
+    String meta,
+  ) async {
+    await wishlistBox.put(
+      "wishlist_meta_$userId",
+      meta,
+    );
+  }
+
+  String? getWishlistMeta(String userId) {
+    return wishlistBox.get(
+      "wishlist_meta_$userId",
+    );
+  }
+
+  Future<void> clearWishlist(String userId) async {
+    await wishlistBox.delete(
+      "wishlist_$userId",
+    );
+
+    await wishlistBox.delete(
+      "wishlist_meta_$userId",
+    );
+  }
+
   // ================= CLEAR ALL =================
   Future<void> clearAll() async {
     await productBox.clear();
@@ -331,5 +387,45 @@ Future<void> clearOrders(
     await orderBox.clear();
 await adminBox.clear();
 await addressBox.clear();
+await wishlistBox.clear();
   }
+
+  Future<void> addRecentProduct(ProductModel product) async {
+  final box = recentProductsBox;
+
+  final List list = box.get(
+    "items",
+    defaultValue: [],
+  );
+
+  // Remove duplicate
+  list.removeWhere(
+    (e) => e["id"] == product.id,
+  );
+
+  // Add to front
+  list.insert(0, product.toMap());
+
+  // Keep only last 20
+  if (list.length > 20) {
+    list.removeRange(20, list.length);
+  }
+
+  await box.put("items", list);
+}
+
+List<ProductModel> getRecentProducts() {
+  final list = recentProductsBox.get(
+    "items",
+    defaultValue: [],
+  );
+
+  return List<Map>.from(list)
+      .map(
+        (e) => ProductModel.fromMap(
+          Map<String, dynamic>.from(e),
+        ),
+      )
+      .toList();
+}
 }

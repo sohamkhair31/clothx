@@ -16,7 +16,6 @@ class AuthRepo {
     required String email,
     required String password,
     required String phone,
-    required String address,
   }) async {
     final credential =
         await _auth
@@ -32,7 +31,6 @@ class AuthRepo {
       name: name.trim(),
       email: email.trim(),
       phone: phone.trim(),
-      address: address.trim(),
       role: "user",
       createdAt: now,
       updatedAt: now,
@@ -108,7 +106,6 @@ class AuthRepo {
     required String uid,
     required String name,
     required String phone,
-    required String address,
   }) async {
     await _firestore
         .collection("users")
@@ -116,7 +113,6 @@ class AuthRepo {
         .update({
       "name": name.trim(),
       "phone": phone.trim(),
-      "address": address.trim(),
       "updatedAt":
           FieldValue.serverTimestamp(),
     });

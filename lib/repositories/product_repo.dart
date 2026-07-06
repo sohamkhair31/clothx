@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/product_model.dart';
 
 class ProductRepo {
+  
   final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
 
@@ -45,4 +46,55 @@ class ProductRepo {
         .toDate()
         .toIso8601String();
   }
+
+Future<List<ProductModel>> searchProducts(
+  String query, {
+  String? gender,
+}) async {
+  print("========== REPO SEARCH ==========");
+
+  Query<Map<String, dynamic>> firestoreQuery = _firestore
+      .collection("products")
+      .where("isActive", isEqualTo: true);
+
+  if (gender != null) {
+    firestoreQuery = firestoreQuery.where(
+      "gender",
+      isEqualTo: gender,
+    );
+  }
+
+  final snapshot = await firestoreQuery.get();
+
+  print("Firestore docs : ${snapshot.docs.length}");
+
+  final products = snapshot.docs
+      .map((e) => ProductModel.fromMap(e.data()))
+      .toList();
+
+  for (final p in products) {
+    print(
+      "Product: ${p.name} | gender=${p.gender} | category=${p.category}",
+    );
+  }
+
+  final q = query
+      .toLowerCase()
+      .replaceAll("-", "")
+      .replaceAll(" ", "");
+
+  final result = products.where((product) {
+    final name = product.name
+        .toLowerCase()
+        .replaceAll("-", "")
+        .replaceAll(" ", "");
+
+    return name.contains(q);
+  }).toList();
+
+  print("Matched : ${result.length}");
+  print("===============================");
+
+  return result;
+}
 }

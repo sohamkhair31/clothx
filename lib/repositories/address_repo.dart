@@ -173,10 +173,8 @@ class AddressRepo {
             .collection("users")
             .doc(userId)
             .collection("addresses")
-            .orderBy(
-              "createdAt",
-              descending: true,
-            )
+            .orderBy("isDefault", descending: true)
+.orderBy("createdAt", descending: true)
             .limit(limit)
             .get();
 
@@ -214,4 +212,27 @@ class AddressRepo {
         .toDate()
         .toIso8601String();
   }
+
+  Future<AddressModel?> getDefaultAddress(
+  String userId,
+) async {
+  final snapshot = await _firestore
+      .collection("users")
+      .doc(userId)
+      .collection("addresses")
+      .where(
+        "isDefault",
+        isEqualTo: true,
+      )
+      .limit(1)
+      .get();
+
+  if (snapshot.docs.isEmpty) {
+    return null;
+  }
+
+  return AddressModel.fromMap(
+    snapshot.docs.first.data(),
+  );
+}
 }

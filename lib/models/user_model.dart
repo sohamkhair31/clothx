@@ -5,7 +5,6 @@ class UserModel {
   final String name;
   final String email;
   final String phone;
-  final String address;
   final String role;
 
   final DateTime createdAt;
@@ -16,7 +15,6 @@ class UserModel {
     required this.name,
     required this.email,
     required this.phone,
-    required this.address,
     required this.role,
     required this.createdAt,
     required this.updatedAt,
@@ -29,7 +27,6 @@ class UserModel {
       "name": name,
       "email": email,
       "phone": phone,
-      "address": address,
       "role": role,
       "createdAt":
           createdAt.toIso8601String(),
@@ -47,7 +44,6 @@ class UserModel {
       name: map["name"] ?? "",
       email: map["email"] ?? "",
       phone: map["phone"] ?? "",
-      address: map["address"] ?? "",
       role: map["role"] ?? "user",
 
       createdAt:
@@ -79,7 +75,6 @@ class UserModel {
       name: name ?? this.name,
       email: email,
       phone: phone ?? this.phone,
-      address: address ?? this.address,
       role: role ?? this.role,
       createdAt: createdAt,
       updatedAt:

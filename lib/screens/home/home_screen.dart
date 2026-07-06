@@ -935,7 +935,15 @@ class _HeroSectionState extends State<HeroSection>
                               label: 'Shop Now',
                               variant: ButtonVariant.outline,
                               small: isMobile,
-                              onTap: () {},
+                              onTap: () {
+                                    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const NewArrivalsScreen(),
+      ),
+    );
+                              },
+                              
                             ),
                           ],
                         ),

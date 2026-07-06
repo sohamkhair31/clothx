@@ -8,6 +8,32 @@ class ProductController extends ChangeNotifier {
   final ProductRepo _productRepo = ProductRepo();
   final CacheService _cacheService = CacheService();
 
+List<ProductModel> _searchResults = [];
+
+List<ProductModel> get searchResults => _searchResults;
+Future<void> searchProducts(
+  String query, {
+  String? gender,
+}) async {
+  print("========== CONTROLLER SEARCH ==========");
+  print("Query  : $query");
+  print("Gender : $gender");
+
+  _searchResults = await _productRepo.searchProducts(
+    query,
+    gender: gender,
+  );
+
+  print("Results returned : ${_searchResults.length}");
+
+  for (final p in _searchResults) {
+    print("-> ${p.name}");
+  }
+
+  print("======================================");
+
+  notifyListeners();
+}
   List<ProductModel> products = [];
 
   bool isLoading = false;
@@ -66,6 +92,8 @@ void loadProductsFromCache() {
 
   print("==============================================");
 }
+
+
   // ================= FETCH PRODUCTS =================
 
 Future<void> fetchProducts() async {
@@ -127,7 +155,11 @@ Future<void> fetchProducts() async {
     print("PRODUCT FETCH ERROR");
     print(e);
     print(s);
-
+for (final p in products) {
+  print(
+    "${p.name} | ${p.gender} | ${p.category}",
+  );
+}
     isLoading = false;
     notifyListeners();
   }
@@ -190,4 +222,5 @@ Future<void> fetchProducts() async {
         )
         .toList();
   }
+
 }

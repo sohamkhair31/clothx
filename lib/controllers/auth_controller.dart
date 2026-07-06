@@ -63,26 +63,23 @@ class AuthController extends ChangeNotifier {
   }
 
   // ================= SIGNUP =================
-  Future<bool> signUp({
-    required String name,
-    required String email,
-    required String password,
-    required String phone,
-    required String address,
-  }) async {
+Future<bool> signUp({
+  required String name,
+  required String email,
+  required String password,
+  required String phone,
+}) async {
     try {
       isLoading = true;
       errorMessage = null;
       notifyListeners();
 
-      await _authRepo.signUp(
-        name: name,
-        email: email,
-        password: password,
-        phone: phone,
-        address: address,
-      );
-
+await _authRepo.signUp(
+  name: name,
+  email: email,
+  password: password,
+  phone: phone,
+);
       currentUser =
           FirebaseAuth.instance.currentUser;
 
@@ -203,42 +200,36 @@ class AuthController extends ChangeNotifier {
   }
 
   // ================= UPDATE PROFILE =================
-  Future<bool> updateProfile({
-    required String name,
-    required String phone,
-    required String address,
-  }) async {
+Future<bool> updateProfile({
+  required String name,
+  required String phone,
+}) async {
     try {
       if (currentUser == null) {
         return false;
       }
 
       // Prevent unnecessary write
-      if (currentUserData != null &&
-          currentUserData!.name == name &&
-          currentUserData!.phone ==
-              phone &&
-          currentUserData!.address ==
-              address) {
-        return true;
-      }
+// Prevent unnecessary write
+if (currentUserData != null &&
+    currentUserData!.name == name &&
+    currentUserData!.phone == phone) {
+  return true;
+}
 
       isLoading = true;
       notifyListeners();
 
-      await _authRepo.updateUser(
-        uid: currentUser!.uid,
-        name: name,
-        phone: phone,
-        address: address,
-      );
-
-      currentUserData =
-          currentUserData?.copyWith(
-        name: name,
-        phone: phone,
-        address: address,
-      );
+await _authRepo.updateUser(
+  uid: currentUser!.uid,
+  name: name,
+  phone: phone,
+);
+currentUserData =
+    currentUserData?.copyWith(
+  name: name,
+  phone: phone,
+);
 
       if (currentUserData != null) {
         await _cacheService.saveUser(

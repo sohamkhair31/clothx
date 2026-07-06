@@ -1,12 +1,21 @@
 import 'dart:ui';
 import 'dart:math' as math;
 import 'package:clothx/controllers/auth_controller.dart';
+import 'package:clothx/controllers/cart_controller.dart';
 import 'package:clothx/controllers/order_controller.dart';
+import 'package:clothx/core/services/cache/cache_service.dart';
 import 'package:clothx/models/order_model.dart';
 import 'package:clothx/models/user_model.dart';
+import 'package:clothx/screens/cart/cart_screen.dart';
+import 'package:clothx/screens/home/utils/profile_edit.dart';
+import 'package:clothx/screens/orders/quick_view.dart';
+import 'package:clothx/screens/orders/wishlist_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+
+import '../../models/product_model.dart';
+
 /// =================================================================
 /// NV'S — ACCOUNT / PROFILE PAGE   (single-file, zero third-party deps)
 /// =================================================================
@@ -757,33 +766,32 @@ class _AccountPageState extends State<AccountPage> {
   final ScrollController _scrollController = ScrollController();
 final ValueNotifier<double> _scrollOffset = ValueNotifier(0);
 
-  final int _cartCount = 3;
   final int _wishlistCount = _demoWishlist.length;
-
 @override
 void initState() {
   super.initState();
 
-final ValueNotifier<double> scrollOffset = ValueNotifier(0);
+  _scrollController.addListener(() {
+    _scrollOffset.value = _scrollController.offset;
+  });
 
-_scrollController.addListener(() {
-  _scrollOffset.value = _scrollController.offset;
-});
-
-  WidgetsBinding.instance.addPostFrameCallback((_) {
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
     final auth = context.read<AuthController>();
+    final orderController = context.read<OrderController>();
+    final cartController = context.read<CartController>();
 
-    final orderController =
-        context.read<OrderController>();
+    // Load cart from Hive
+    cartController.loadCart();
 
     final uid = auth.currentUser?.uid;
 
     if (uid != null) {
       orderController.loadOrdersFromCache(uid);
-      orderController.fetchOrders(uid);
+      await orderController.fetchOrders(uid);
     }
   });
 }
+
 
 @override
 void dispose() {
@@ -792,18 +800,27 @@ void dispose() {
   super.dispose();
 }
 
-  @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final isMobile = NVBreakpoints.isMobile(width);
-    final isTablet = NVBreakpoints.isTablet(width);
-    final horizontalPadding = isMobile ? 18.0 : (isTablet ? 32.0 : 56.0);
+@override
+Widget build(BuildContext context) {
+  final width = MediaQuery.of(context).size.width;
+  final isMobile = NVBreakpoints.isMobile(width);
+  final isTablet = NVBreakpoints.isTablet(width);
+  final horizontalPadding =
+      isMobile ? 18.0 : (isTablet ? 32.0 : 56.0);
 
-final orderController =
-    context.watch<OrderController>();
-final authController = context.read<AuthController>();
-final user = authController.currentUserData;
-    return Scaffold(
+  final authController = context.read<AuthController>();
+  final user = authController.currentUserData;
+
+  final orderController = context.watch<OrderController>();
+  final cartController = context.watch<CartController>();
+
+  final orderCount = orderController.orders.length;
+  final cartCount = cartController.cartItems.length;
+
+  print("Orders : $orderCount");
+  print("Cart   : $cartCount");
+
+  return Scaffold(
       backgroundColor: NVColors.charcoal,
       body: Stack(
         children: [
@@ -833,7 +850,7 @@ child: RepaintBoundary(
                     NVStaggerIn(
                       delay: const Duration(milliseconds: 80),
                       child: _QuickAccessRow(
-                        cartCount: _cartCount,
+                        cartCount: cartCount,
                         wishlistCount: _wishlistCount,
                         isMobile: isMobile,
                       ),
@@ -844,8 +861,9 @@ child: RepaintBoundary(
                       child: _StatsGrid(
                         isMobile: isMobile,
                         isTablet: isTablet,
-                        cartCount: _cartCount,
+                        cartCount: cartCount,
                         wishlistCount: _wishlistCount,
+  orderCount: orderCount,
                       ),
                     ),
                     SizedBox(height: isMobile ? 40 : 56),
@@ -924,7 +942,7 @@ Consumer<OrderController>(
         return _AccountGlassNav(
           isMobile: isMobile,
           scrolled: offset > 12,
-          cartCount: _cartCount,
+          cartCount: cartCount,
           wishlistCount: _wishlistCount,
         );
       },
@@ -1098,22 +1116,30 @@ class _AccountGlassNav extends StatelessWidget {
                       icon: Icons.favorite_border_rounded,
                       count: wishlistCount,
                       // TODO: navigate to existing Wishlist route/provider.
-                      onTap: () {},
+                      onTap: () {
+                         Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const WishlistScreen(),
+      ),
+    );
+                      },
                     ),
                     const SizedBox(width: 8),
                     _BadgedIconButton(
                       icon: Icons.shopping_bag_outlined,
                       count: cartCount,
                       // TODO: navigate to existing Cart route/provider.
-                      onTap: () {},
+                      onTap: () {
+                         Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CartScreen(),
+      ),
+    );
+                      },
                     ),
-                    if (!isMobile) ...[
-                      const SizedBox(width: 8),
-                      _BadgedIconButton(
-                        icon: Icons.search_rounded,
-                        onTap: () {},
-                      ),
-                    ],
+                    
                   ],
                 ),
               ],
@@ -1269,19 +1295,6 @@ Container(
 ),
         
         const SizedBox(height: 16),
-        SizedBox(
-          width: isMobile ? 220 : 260,
-          child: Text(
-  user?.address.isNotEmpty == true
-      ? user!.address
-      : "No address added",
-  maxLines: 2,
-  overflow: TextOverflow.ellipsis,
-  style: const TextStyle(
-    color: NVColors.softGray,
-  ),
-),
-        ),
       ],
     );
 
@@ -1290,26 +1303,19 @@ Container(
       runSpacing: 10,
       alignment: isMobile ? WrapAlignment.center : WrapAlignment.start,
       children: [
-        NVPillButton(
-          label: 'Edit Profile',
-          icon: Icons.edit_rounded,
-          solid: true,
-          small: isMobile,
-          // TODO: hook to existing edit-profile flow/controller.
-          onTap: () {},
-        ),
-        NVPillButton(
-          label: 'Share Profile',
-          icon: Icons.ios_share_rounded,
-          small: isMobile,
-          onTap: () {},
-        ),
-        NVPillButton(
-          label: 'Settings',
-          icon: Icons.settings_outlined,
-          small: isMobile,
-          onTap: () {},
-        ),
+NVPillButton(
+  label: 'Edit Profile',
+  icon: Icons.edit_rounded,
+  solid: true,
+  small: isMobile,
+  onTap: () {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => const EditProfileDialog(),
+    );
+  },
+),
       ],
     );
 
@@ -1351,62 +1357,78 @@ class _EditableAvatar extends StatefulWidget {
 class _EditableAvatarState extends State<_EditableAvatar> {
   bool _hover = false;
 
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        // TODO: hook to existing avatar-upload logic.
-        onTap: () {},
-        child: Container(
-          width: widget.size,
-          height: widget.size,
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              colors: [NVColors.gold, NVColors.beige],
+@override
+Widget build(BuildContext context) {
+  final user = context.read<AuthController>().currentUser;
+
+  final letter = (user?.email?.isNotEmpty ?? false)
+      ? user!.email![0].toUpperCase()
+      : "?";
+
+  return MouseRegion(
+    onEnter: (_) => setState(() => _hover = true),
+    onExit: (_) => setState(() => _hover = false),
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: () {},
+      child: Container(
+        width: widget.size,
+        height: widget.size,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const LinearGradient(
+            colors: [
+              NVColors.gold,
+              NVColors.beige,
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: NVColors.gold.withOpacity(
+                _hover ? 0.45 : 0.25,
+              ),
+              blurRadius: _hover ? 26 : 16,
+              spreadRadius: 1,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: NVColors.gold.withOpacity(_hover ? 0.45 : 0.25),
-                blurRadius: _hover ? 26 : 16,
-                spreadRadius: 1,
+          ],
+        ),
+        child: ClipOval(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Container(
+                color: NVColors.charcoalLight,
+                alignment: Alignment.center,
+                child: Text(
+                  letter,
+                  style: TextStyle(
+                    color: NVColors.white,
+                    fontSize: widget.size * 0.42,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              AnimatedOpacity(
+                opacity: _hover ? 1 : 0,
+                duration: const Duration(milliseconds: 180),
+                child: Container(
+                  color: Colors.black.withOpacity(0.45),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.camera_alt_rounded,
+                    color: NVColors.white,
+                    size: 22,
+                  ),
+                ),
               ),
             ],
           ),
-          child: ClipOval(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.network(
-                  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=400&auto=format&fit=crop',
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: NVColors.charcoalLight,
-                    child: const Icon(Icons.person_rounded,
-                        color: NVColors.softGray, size: 40),
-                  ),
-                ),
-                AnimatedOpacity(
-                  opacity: _hover ? 1 : 0,
-                  duration: const Duration(milliseconds: 180),
-                  child: Container(
-                    color: Colors.black.withOpacity(0.45),
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.camera_alt_rounded,
-                        color: NVColors.white, size: 22),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _MembershipBadge extends StatelessWidget {
@@ -1523,15 +1545,27 @@ class _QuickAccessRow extends StatelessWidget {
         subtitle: '$cartCount item${cartCount == 1 ? '' : 's'} ready to checkout',
         color: NVColors.gold,
         // TODO: navigate to existing Cart page/provider.
-        onTap: () {},
+        onTap: () {    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CartScreen(),
+      ),
+    );},
       ),
       _QuickAccessTile(
         icon: Icons.favorite_rounded,
         title: 'My Wishlist',
-        subtitle: '$wishlistCount saved piece${wishlistCount == 1 ? '' : 's'}',
+        subtitle: '',
         color: NVColors.beige,
         // TODO: navigate to existing Wishlist page/provider.
-        onTap: () {},
+        onTap: () {
+          Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const WishlistScreen(),
+      ),
+    );
+        },
       ),
     ];
 
@@ -1643,24 +1677,46 @@ class _StatsGrid extends StatelessWidget {
   final bool isTablet;
   final int cartCount;
   final int wishlistCount;
-
+final int orderCount;
   const _StatsGrid({
     required this.isMobile,
     required this.isTablet,
     required this.cartCount,
-    required this.wishlistCount,
+    required this.wishlistCount, required this.orderCount,
   });
 
   @override
   Widget build(BuildContext context) {
-    final stats = [
-      _StatData(Icons.receipt_long_rounded, 'Orders', 24, NVColors.info),
-      _StatData(Icons.favorite_rounded, 'Wishlist', wishlistCount, NVColors.beige),
-      _StatData(Icons.bookmark_rounded, 'Saved Items', 12, NVColors.gold),
-      _StatData(Icons.stars_rounded, 'Reward Points', 2840, NVColors.warning),
-      _StatData(Icons.local_offer_rounded, 'Coupons', _demoCoupons.length, NVColors.success),
-      _StatData(Icons.reviews_rounded, 'Reviews', 9, NVColors.danger),
-    ];
+    final rewardPoints = orderCount * 6;
+final stats = [
+  _StatData(
+    Icons.receipt_long_rounded,
+    'Orders',
+    orderCount,
+    NVColors.info,
+  ),
+
+  _StatData(
+    Icons.shopping_cart_rounded,
+    'Cart',
+    cartCount,
+    NVColors.success,
+  ),
+
+  _StatData(
+    Icons.stars_rounded,
+    'Reward Points',
+    rewardPoints,
+    NVColors.warning,
+  ),
+
+  _StatData(
+    Icons.reviews_rounded,
+    'Reviews',
+    0,
+    NVColors.danger,
+  ),
+];
 
     final columns = isMobile ? 2 : (isTablet ? 3 : 6);
 
@@ -1754,10 +1810,6 @@ class _AccountSectionsGrid extends StatelessWidget {
     final items = <_SectionTileData>[
       _SectionTileData(Icons.location_on_outlined, 'Shipping Addresses',
           '${_demoAddresses.length} saved addresses'),
-      _SectionTileData(Icons.receipt_long_outlined, 'Order History',
-          '${_demoOrders.length} orders placed'),
-      _SectionTileData(Icons.favorite_border_rounded, 'Wishlist',
-          '${_demoWishlist.length} items saved'),
       _SectionTileData(Icons.workspace_premium_outlined, 'Rewards & Membership',
           'Gold tier — 2,840 pts'),
 
@@ -2069,24 +2121,24 @@ class _OrderCardState extends State<_OrderCard> {
       spacing: 8,
       runSpacing: 8,
       children: [
-        NVPillButton(
-          label: 'Track',
-          icon: Icons.map_outlined,
-          small: true,
-          onTap: () {},
-        ),
-        NVPillButton(
-          label: 'Reorder',
-          icon: Icons.replay_rounded,
-          small: true,
-          onTap: () {},
-        ),
-        NVPillButton(
-          label: 'Invoice',
-          icon: Icons.download_rounded,
-          small: true,
-          onTap: () {},
-        ),
+        // NVPillButton(
+        //   label: 'Track',
+        //   icon: Icons.map_outlined,
+        //   small: true,
+        //   onTap: () {},
+        // ),
+        // NVPillButton(
+        //   label: 'Reorder',
+        //   icon: Icons.replay_rounded,
+        //   small: true,
+        //   onTap: () {},
+        // ),
+        // NVPillButton(
+        //   label: 'Invoice',
+        //   icon: Icons.download_rounded,
+        //   small: true,
+        //   onTap: () {},
+        // ),
         _IconOnlyToggle(
           expanded: _expanded,
           onTap: () => setState(() => _expanded = !_expanded),
@@ -2781,124 +2833,155 @@ class _AchievementBadge extends StatelessWidget {
 class _RecommendedSection extends StatelessWidget {
   final bool isMobile;
   final bool isTablet;
-  const _RecommendedSection({required this.isMobile, required this.isTablet});
+
+  const _RecommendedSection({
+    required this.isMobile,
+    required this.isTablet,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final recentProducts =
+        CacheService().getRecentProducts();
+
+    if (recentProducts.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     final cardWidth = isMobile ? 168.0 : 220.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         NVSectionHeader(
-          eyebrow: 'Just for you',
-          title: 'Recommended & Continue Shopping',
-          subtitle: 'Curated from your browsing and purchase history.',
+          eyebrow: 'Recently Viewed',
+          title: 'Continue Shopping',
+          subtitle:
+              'Products you recently explored.',
           isMobile: isMobile,
         ),
+
         SizedBox(height: isMobile ? 20 : 28),
+
         SizedBox(
           height: isMobile ? 258 : 310,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
-            itemCount: _demoRecommended.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 14),
-            itemBuilder: (context, i) =>
-                _RecommendedCard(product: _demoRecommended[i], width: cardWidth),
+            itemCount: recentProducts.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(width: 14),
+            itemBuilder: (_, i) {
+              return _RecentProductCard(
+                product: recentProducts[i],
+                width: cardWidth,
+              );
+            },
           ),
         ),
       ],
     );
   }
 }
-
-class _RecommendedCard extends StatefulWidget {
-  final NVProduct product;
+class _RecentProductCard extends StatefulWidget {
+  final ProductModel product;
   final double width;
-  const _RecommendedCard({required this.product, required this.width});
+
+  const _RecentProductCard({
+    required this.product,
+    required this.width,
+  });
 
   @override
-  State<_RecommendedCard> createState() => _RecommendedCardState();
+  State<_RecentProductCard> createState() =>
+      _RecentProductCardState();
 }
 
-class _RecommendedCardState extends State<_RecommendedCard> {
+class _RecentProductCardState
+    extends State<_RecentProductCard> {
   bool _hover = false;
 
   @override
   Widget build(BuildContext context) {
     final p = widget.product;
+
+    final image = p.colors.isNotEmpty
+        ? p.colors.first.image
+        : "";
+
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
       cursor: SystemMouseCursors.click,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        width: widget.width,
-        transform: Matrix4.translationValues(0, _hover ? -6 : 0, 0),
-        child: NVGlassCard(
-          radius: 18,
-          highlight: _hover,
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      AnimatedScale(
-                        scale: _hover ? 1.08 : 1.0,
-                        duration: const Duration(milliseconds: 380),
-                        child: Image.network(
-                          p.imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            color: NVColors.charcoalLight,
-                            child: const Icon(Icons.image_outlined, color: NVColors.softGray),
+      child: GestureDetector(
+        onTap: () {
+          QuickView.show(context, p);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          width: widget.width,
+          transform: Matrix4.translationValues(
+            0,
+            _hover ? -6 : 0,
+            0,
+          ),
+          child: NVGlassCard(
+            radius: 18,
+            highlight: _hover,
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius:
+                        BorderRadius.circular(14),
+                    child: AnimatedScale(
+                      scale: _hover ? 1.08 : 1,
+                      duration:
+                          const Duration(milliseconds: 350),
+                      child: Image.network(
+                        image,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            Container(
+                          color: NVColors.charcoalLight,
+                          child: const Icon(
+                            Icons.image_outlined,
+                            color: NVColors.softGray,
                           ),
                         ),
                       ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            // TODO: hook to existing wishlist toggle.
-                            onTap: () {},
-                            customBorder: const CircleBorder(),
-                            child: Container(
-                              width: 28,
-                              height: 28,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.black.withOpacity(0.45),
-                              ),
-                              child: const Icon(Icons.favorite_border_rounded,
-                                  size: 13, color: NVColors.ivory),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(p.title,
+
+                const SizedBox(height: 8),
+
+                Text(
+                  p.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      color: NVColors.ivory, fontSize: 12.5, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 3),
-              Text('\$${p.price.toStringAsFixed(0)}',
+                    color: NVColors.ivory,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+
+                const SizedBox(height: 3),
+
+                Text(
+                  "₹${p.price.toStringAsFixed(0)}",
                   style: const TextStyle(
-                      color: NVColors.gold, fontSize: 13, fontWeight: FontWeight.w700)),
-            ],
+                    color: NVColors.gold,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
